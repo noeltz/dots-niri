@@ -21,6 +21,7 @@
     	"idle_inhibitor",
     	],
     "modules-center": [
+    	"niri/window",
     	"custom/music"
     	],
     "modules-right": [
@@ -141,7 +142,7 @@
         "tooltip": false
     },
     "clock#time": {
-        "timezone": "America/Lima",
+        "timezone": "Europe/Berlin",
         "format": " {:%H:%M}",
         "tooltip": false
     },

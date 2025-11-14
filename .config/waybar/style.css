@@ -134,3 +134,8 @@
 #custom-separator {
     color: @gray300;
 }
+
+/*---NIRI-WINDOW---*/
+#window {
+ 	color: @gray300;
+}

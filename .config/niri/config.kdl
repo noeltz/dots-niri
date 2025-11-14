@@ -1,8 +1,8 @@
 // Autostart
-spawn-at-startup "waybar"
-spawn-at-startup "mako"
-spawn-at-startup "hyprpaper"
-spawn-at-startup "hypridle"
+spawn-sh-at-startup "waybar"
+spawn-sh-at-startup "mako"
+spawn-sh-at-startup "hyprpaper"
+spawn-sh-at-startup "hypridle"
 spawn-sh-at-startup "wlsunset -l -12.1142476 -L -77.0104654 -t 4000 -T 6500 -d 300"
 
 prefer-no-csd
@@ -25,7 +25,7 @@ overview {
 input {
     keyboard {
         xkb {
-            layout "latam"
+            layout "de"
         }
         numlock
     }
@@ -41,21 +41,23 @@ input {
 }
 
 // https://yalter.github.io/niri/Configuration:-Outputs
-output "eDP-1" {
+output "HDMI-A-1" {
     // off
     // Run `niri msg outputs` while inside a niri instance to list all outputs and their modes.
-    mode "1920x1080@165"
-    scale 1
-    transform "normal"
-    position x=1920 y=0
+    mode "1920x1080"
+	transform "normal"
 }
 
 output "DP-1" {
 	// off
-	mode "1920x1080@120.019"
-	scale 1
+    mode "1920x1080"
 	transform "normal"
-	position x=0 y=0
+}
+
+output "Virtual-1" {
+	// off
+    mode "1920x1080"
+	transform "normal"
 }
 
 // https://yalter.github.io/niri/Configuration:-Layout
@@ -81,7 +83,7 @@ layout {
     }
 
     border { 
-    	width 2
+    	width 1
    		active-color "#d1d1d1"
    		inactive-color "#505050"
 
@@ -102,12 +104,12 @@ animations {
 
 binds {
     Mod+O repeat=false { toggle-overview; }
-    Mod+W repeat=false { close-window; }
+    Mod+Q repeat=false { close-window; }
     Mod+Return    { spawn "kitty"; }
-    Mod+B         { spawn "firefox"; }
+    Mod+B         { spawn "google-chrome-stable"; }
     Mod+E         { spawn "kitty" "--class" "yazi" "-e" "yazi"; }
     Mod+L         { spawn "hyprlock"; }
-    Mod+Q         { spawn ".config/rofi/launcher.sh"; }
+    Mod+Ctrl+Return     { spawn ".config/rofi/launcher.sh"; }
     Mod+P         { spawn ".config/rofi/colorpicker.sh"; }
     Mod+Backspace { spawn ".config/rofi/powermenu.sh"; }
  
@@ -174,8 +176,8 @@ binds {
     Mod+R       { switch-preset-column-width; }
     Mod+Shift+R { switch-preset-window-height; }
     Mod+Ctrl+R  { reset-window-height; }
-    Mod+F       { maximize-column; }
-    Mod+Shift+F { fullscreen-window; }
+    Mod+F       { fullscreen-window; }
+    Mod+Shift+F { maximize-column; }
 
     Mod+C { center-column; }
 
