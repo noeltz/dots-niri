@@ -5,6 +5,7 @@ DOTFILES_REPO="$HOME/.dotfiles/dots-niri"
 PKG_FILE="$DOTFILES_REPO/packages.txt"
 AUR_FILE="$DOTFILES_REPO/aur-packages.txt"
 
+echo "==> Starting setup for niri dotfiles...."
 echo "==> Installing required packages..."
 
 # --- Pacman packages ---
