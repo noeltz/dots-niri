@@ -32,12 +32,11 @@ mpv
 niri
 npm
 ntfs-3g
-nwg-displays
+nwg-look
 otf-geist-mono-nerd
 papirus-icon-theme
 pipewire
 pipewire-alsa
-pipewire-jack
 pipewire-pulse
 poppler
 resvg
