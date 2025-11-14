@@ -75,6 +75,11 @@ else
     echo "⚠️ ly not found, skipped enabling display manager."
 fi
 
+# --- Make scripts executable ---
+echo "==> Making scripts executable..."
+chmod +x "$DOTFILES_REPO/rofi/*.sh"
+chmod +x "$DOTFILES_REPO/scripts/*.sh"
+
 # --- Check stow ---
 if ! command -v stow >/dev/null 2>&1; then
     echo "==> stow not found, installing..."
