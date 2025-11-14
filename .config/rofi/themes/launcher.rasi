@@ -1,0 +1,78 @@
+configuration {
+    modes:                      [drun];
+    show-icons:                 true;
+    icon-theme: 				"Papirus-Dark";
+    display-drun:               "  ";
+}
+@import "tui"
+
+* {
+	accent: @white;
+	bg: @base;
+	background-color: @bg;
+}
+
+window {
+    location:                    center;
+    width:                       30%;
+    padding:                     10px;
+    border:                      2px solid;
+    border-color:                @accent;
+    background-color:            @bg;
+}
+
+inputbar {
+    spacing:                     10px;
+    margin:                      0 0 10px 0;
+    padding:					 8px 0;
+    children:                    [ "prompt", "entry" ];
+    border:                      0 0 1px 0 solid;
+    border-color:                @accent;
+}
+
+prompt {
+    text-color:                  @accent;
+}
+
+entry {
+    text-color:                  @accent;
+    cursor:                      text;
+    placeholder:                 "Search application";
+}
+
+listview {
+	dynamic:					 true;
+    columns:                     1;
+    lines:                       10;
+}
+
+element {
+    margin:                      0px;
+    padding:                     10px;
+    border:                      0px solid;
+    background-color:            transparent;
+    cursor:                      pointer;
+    text-color: @accent;
+}
+element-text {
+    background-color:            inherit;
+    text-color:                  inherit;
+    vertical-align:				 0.5;
+}
+element normal.normal {
+    background-color:            @bg;
+    text-color:                  @accent;
+}
+element selected.normal {
+    background-color:            @accent;
+    text-color:                  @black;
+    border:                      1px solid;
+}
+element-icon {
+    background-color:            @bg;
+    size:                        20px;
+    margin: 			         0 10px 0 0;
+}
+element-icon selected {
+    background-color:		 	 @accent;
+}

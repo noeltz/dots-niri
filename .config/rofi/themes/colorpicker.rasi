@@ -1,0 +1,66 @@
+configuration {
+    show-icons:                 false;
+}
+@import "tui" 
+
+* {
+	accent: @white;
+}
+
+/*
+USE_BUTTONS=YES
+*/
+
+window {
+    location:			 		 center;
+    width:                       15%;
+    margin:                      0px;
+    padding:                     10px 15px;
+    border:                      2px solid;
+    border-color:		 		 @white;    
+    background-color:            @base;
+    children: 			 		 [ "message", "listview" ];
+}
+
+message {
+    padding:                     5px 0;
+    margin:                      0 0 10px 0;
+    background-color:            transparent;
+    text-color:					 @accent;    
+    font-weight:				 bold;
+    border:						 0px 0px 1px solid;
+    border-color:				 @accent;
+}
+
+textbox {
+    background-color:            inherit;
+    text-color:                  inherit;
+    horizontal-align:            0.5;
+}
+
+listview {
+    enabled:                     true;
+    columns:                     1;
+    lines:                       5;
+    layout:                      vertical;
+    background-color:	 	 	 transparent;
+}
+
+element {
+    padding:					 10px;
+    border-color:                @white;
+    background-color:            @base;
+    text-color:                  @accent;
+    cursor:                      pointer;
+}
+element selected.normal {
+	border: 					 1px solid;
+    background-color:            @accent;
+    text-color:                  @black;
+}
+element-text {
+    background-color:            transparent;
+    text-color:                  inherit;
+    cursor:                      inherit;
+    vertical-align:              0.5;
+}

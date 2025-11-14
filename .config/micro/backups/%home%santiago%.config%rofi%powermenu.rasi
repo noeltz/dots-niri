@@ -1,0 +1,65 @@
+configuration {
+    show-icons:                 false;
+}
+@import "mocha" 
+
+/*
+USE_BUTTONS=YES
+*/
+
+window {
+    /* properties for window widget */
+    location:			 center;
+    width:                       30%;
+    margin:                      0px;
+    padding:                     10px;
+    border:                      1px solid;
+    border-color:		 white;    
+    background-color:            black;
+    children: 			 [ "message", "listview" ];
+}
+
+
+message {
+    margin:                      0 0 10px 0;
+    background-color:            black;
+    text-color:                  white;
+}
+
+textbox {
+    font:			 "GeistMono NF 11";
+    background-color:            inherit;
+    text-color:                  inherit;
+    horizontal-align:            0.5;
+    placeholder-color:           white;
+}
+
+listview {
+    enabled:                     true;
+    columns:                     5;
+    lines:                       1;
+    layout:                      vertical;
+    spacing:                     10px;
+    background-color:	 	 transparent;
+}
+
+element {
+    padding:			 10px;
+    border:                      1px solid;
+    border-color:                white;
+    background-color:            black;
+    text-color:                  white;
+    cursor:                      pointer;
+}
+element selected.normal {
+    background-color:            white;
+    text-color:                  black;
+}
+element-text {
+    font:                        "GeistMono NF 25";
+    background-color:            transparent;
+    text-color:                  inherit;
+    cursor:                      inherit;
+    vertical-align:              0.5;
+    horizontal-align:            0.5;
+}

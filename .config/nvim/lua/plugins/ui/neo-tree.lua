@@ -1,0 +1,49 @@
+return {
+	-- "nvim-neo-tree/neo-tree.nvim",
+	-- branch = "v3.x",
+	-- dependencies = {
+	-- 	"nvim-lua/plenary.nvim",
+	-- 	"MunifTanjim/nui.nvim",
+	-- 	"mfussenegger/nvim-lint",
+	-- },
+	-- lazy = false,
+	-- config = function()
+	-- 	require("neo-tree").setup({
+	-- 		-- open_files_do_not_replace_types = { "terminal", "Trouble", "qf", "edgy", "neo-tree" },
+	-- 		-- sources = {
+	-- 		-- 	"filesystem",
+	-- 		-- 	"buffers",
+	-- 		-- 	"git_status",
+	-- 		-- 	"document_symbols",
+	-- 		-- },
+	-- 		-- source_selector = {
+	-- 		-- 	winbar = true,
+	-- 		-- 	content_layout = "center",
+	-- 		-- 	sources = {
+	-- 		-- 		{ source = "filesystem", display_name = " Files" },
+	-- 		-- 		{ source = "buffers", display_name = " Buffers" },
+	-- 		-- 		{ source = "git_status", display_name = " Git" },
+	-- 		-- 		{ source = "document_symbols", display_name = " Symbols" },
+	-- 		-- 	},
+	-- 		-- 	tabs_layout = "active",
+	-- 		-- },
+	-- 		-- default_component_configs = {
+	-- 		-- 	indent = {
+	-- 		-- 		with_expanders = true,
+	-- 		-- 		expander_collapsed = "",
+	-- 		-- 		expander_expanded = "",
+	-- 		-- 	},
+	-- 		-- },
+	-- 		-- diagnostics = {
+	-- 		-- 	enable = true,
+	-- 		-- 	bind_to_cwd = false,
+	-- 		-- 	show_on_dirs = true,
+	-- 		-- 	show_on_open_dirs = true,
+	-- 		-- },
+	-- 	})
+	--
+	-- 	-- Keymaps to toggle between sources
+	-- 	vim.keymap.set("n", "<leader>te", ":Neotree toggle filesystem<CR>", { desc = "Toggle Neo-tree (filesystem)" })
+	-- 	-- vim.keymap.set("n", "<leader>tb", ":Neotree toggle buffers<CR>", { desc = "Toggle Neo-tree (buffers)" })
+	-- end,
+}
