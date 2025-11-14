@@ -24,9 +24,9 @@ else
 fi
 
 # --- Install yay if not installed ---
-if ! command -v yay >/dev/null 2>&1; then
+if ! type -a yay >/dev/null 2>&1; then
     echo "==> yay not found, installing..."
-    if command -v paru >/dev/null 2>&1; then
+    if type -a -v paru >/dev/null 2>&1; then
         paru -S --needed --noconfirm yay
     fi
 else
