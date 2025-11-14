@@ -1,0 +1,136 @@
+@import "colors.css";
+
+* {
+	font-family: "JetBrainsMono Nerd Font";
+  	font-size: 13px;
+	font-weight: bold;
+  	padding: 0;
+  	margin: 0;
+  	border: none;
+}
+
+/*---WAYBAR---*/
+#waybar {
+	background: @gray950;
+	border: 1.5px solid @gray300;
+}
+
+/*---WORKSPACES---*/
+#workspaces {
+	background: transparent;
+}
+#workspaces button {
+  	background: transparent;
+  	color: @gray300;
+  	border: none;
+  	padding: 0 0.4rem;
+}
+#workspaces label               { font-size: 14px;  }
+#workspaces button.active       { color: @gray200;   }
+#workspaces button.empty        { color: @gray500; }
+#workspaces button:hover {
+  	box-shadow: inherit;
+  	text-shadow: inherit;
+}
+
+/*---DEFAULT---*/
+#custom-logo,
+#user,
+#memory,
+#cpu,
+#idle_inhibitor,
+#custom-music,
+#language,
+#wireplumber,
+#network,
+#bluetooth,
+#backlight,
+#battery,
+#clock,
+#power {
+	background: transparent;
+ 	padding: 0.5rem;
+}
+
+/*---LOGO---*/
+#custom-logo {
+ 	padding: 0 1rem;
+	font-size: 16px;
+	color: @gray200;
+}
+
+/*---USER(UPTIME)---*/
+#user {
+ 	color: @gray200;
+}
+
+/*---RAM---*/
+#memory {
+ 	color: @gray300;
+}
+
+/*---CPU---*/
+#cpu {
+ 	color: @gray400;
+}
+
+/*---IDLE---*/
+#idle_inhibitor {
+ 	color: @gray400;
+}
+
+/*---MUSIC---*/
+#custom-music {
+ 	color: @gray200;
+}
+
+/*---KEYBOARD-LANG---*/
+#language {
+ 	color: @gray300;
+}
+
+/*---VOLUME---*/
+#wireplumber {
+ 	color: @gray300;
+}
+
+/*---NETWORK---*/
+#network {
+ 	color: @gray200;
+}
+
+/*---BLUETOOTH---*/
+#bluetooth {
+ 	color: @gray200;
+}
+
+/*---BACKLIGHT---*/
+#backlight {
+ 	color: @gray100;
+}
+
+/*---BATTERY---*/
+#battery {
+ 	color: @green;
+}
+#battery.charging {
+  	color: @teal;
+}
+#battery.warning:not(.charging) {
+  	color: @peach;
+}
+#battery.critical:not(.charging) {
+  	color: @red;
+}
+
+/*---CLOCK&DATE---*/
+#clock.time {
+ 	color: @gray300;
+}
+#clock.date {
+ 	color: @gray200;
+}
+
+#custom-separator {
+    color: @gray300;
+}
