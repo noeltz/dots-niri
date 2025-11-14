@@ -24,12 +24,8 @@ else
 fi
 
 # --- Install yay if not installed ---
-if ! type -a yay >/dev/null 2>&1; then
+if ! command -v yay >/dev/null 2>&1; then
     echo "==> yay not found, installing..."
-    if type -a -v paru >/dev/null 2>&1; then
-        paru -S --needed --noconfirm yay
-    fi
-else
     sudo pacman -S --needed --noconfirm git base-devel
     tmpdir=$(mktemp -d)
     git clone https://aur.archlinux.org/yay.git "$tmpdir/yay"
@@ -77,8 +73,8 @@ fi
 
 # --- Make scripts executable ---
 echo "==> Making scripts executable..."
-chmod +x "$DOTFILES_REPO/rofi/*.sh"
-chmod +x "$DOTFILES_REPO/scripts/*.sh"
+chmod +x "$DOTFILES_REPO/.config/rofi/*.sh"
+chmod +x "$DOTFILES_REPO/.config/scripts/*.sh"
 
 # --- Check stow ---
 if ! command -v stow >/dev/null 2>&1; then
