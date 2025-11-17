@@ -28,6 +28,7 @@ libnotify
 ly
 mako
 man-db
+mate-polkit
 mpv
 niri
 npm
