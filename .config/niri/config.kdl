@@ -52,7 +52,7 @@ input {
         // accel-profile "flat"
         // scroll-method "no-scroll"
     }
-    warp-mouse-to-focus
+    focus-follows-mouse max-scroll-amount="0%"
 }
 
 cursor {
