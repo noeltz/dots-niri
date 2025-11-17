@@ -39,11 +39,11 @@ TARGET_DIR="$HOME"
 
 # --- Backup current dotfiles ---
 echo "==> Starting backup process..."
+BACKUP_DIR="$HOME/.dotfiles_backup_$(date +%Y%m%d-%H%M%S)"
 echo "Targeting package: $PACKAGE_NAME"
 echo "Backing up to: $BACKUP_DIR"
 
 # Create the backup directory
-BACKUP_DIR="$HOME/.dotfiles_backup_$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$BACKUP_DIR"
 echo "Created backup directory $BACKUP_DIR"
 
