@@ -40,6 +40,7 @@ TARGET_DIR="$HOME"
 # --- Backup current dotfiles ---
 echo "==> Starting backup process..."
 BACKUP_DIR="$HOME/.dotfiles_backup_$(date +%Y%m%d-%H%M%S)"
+sudo pacman -Syu --needed --noconfirm rsync
 echo "Targeting package: $PACKAGE_NAME"
 echo "Backing up to: $BACKUP_DIR"
 
@@ -57,43 +58,49 @@ for item in .*; do
         continue
     fi
     DEST_PATH="$TARGET_DIR/$item"
-    BACKUP_PATH="$BACKUP_DIR/$item"
+    
+    # Check if *anything* exists at the destination path
+    if [ -e "$DEST_PATH" ] || [ -L "$DEST_PATH" ]; then
 
-    # CASE 1: The destination is a REAL file/folder (not a symlink)
-    if [ -e "$DEST_PATH" ] && [ ! -L "$DEST_PATH" ]; then
-        echo "Found existing real item: $DEST_PATH. Moving to backup..."
-        # Move the data to the backup directory
-        mv "$DEST_PATH" "$BACKUP_PATH"
-        echo "Moved to $BACKUP_PATH"
-
-    # CASE 2: The destination is an existing SYMLINK
-    elif [ -L "$DEST_PATH" ]; then
-        # Get the actual path the symlink points to
-        SYMLINK_TARGET=$(readlink -f "$DEST_PATH")
-
-        # Check if the symlink target is a valid location and not already within our dotfiles repo
-        if [ -e "$SYMLINK_TARGET" ] && [[ "$SYMLINK_TARGET" != "$DOTFILES_DIR"* ]]; then
-            echo "Found existing symlink: $DEST_PATH. The target data ($SYMLINK_TARGET) will be copied for backup purposes."
-
-            # We create a directory structure in the backup to represent where the data came from
-            mkdir -p "$(dirname "$BACKUP_PATH")"
-            
-            # Copy the actual *contents* of the target into the backup directory
-            # Use rsync for robust copying of directory contents
-            rsync -a "$SYMLINK_TARGET" "$BACKUP_PATH"
-
-            echo "Copied target data to $BACKUP_PATH for backup."
+        ORIGINAL_SOURCE=""
+        # 1. Determine where the actual data lives
+        if [ -L "$DEST_PATH" ]; then
+            ORIGINAL_SOURCE=$(readlink -f "$DEST_PATH")
         else
-            echo "Found existing symlink $DEST_PATH pointing to something outside a safe backup scope (e.g., already in dotfiles repo or invalid target). Leaving symlink alone."
+            ORIGINAL_SOURCE="$DEST_PATH"
         fi
-        
-        # In both symlink subcases, we must remove the old symlink so stow can replace it cleanly
-        rm "$DEST_PATH"
-        echo "Removed old symlink $DEST_PATH."
 
-    # CASE 3: Nothing exists, nothing to back up
+        # 2. ALWAYS back up the original data, regardless of where it is
+        if [ -e "$ORIGINAL_SOURCE" ]; then
+            echo "Found existing item: $DEST_PATH. Backing up the original content from $ORIGINAL_SOURCE..."
+            # Ensure path structure is maintained in backup directory
+            mkdir -p "$BACKUP_DIR/$(dirname "$item")"
+            # Use rsync to copy the actual data into the backup directory
+            rsync -a "$ORIGINAL_SOURCE" "$BACKUP_DIR/$item"
+            echo "Copied data to $BACKUP_DIR/$item"
+        else
+            echo "Note: $DEST_PATH existed but its target $ORIGINAL_SOURCE did not (broken link?). Skipping data backup."
+        fi
+
+        # 3. Determine if the item needs to be REMOVED to make way for stow
+        IS_MANAGED=false
+        if [ -L "$DEST_PATH" ]; then
+            # If it's a symlink pointing into our repo, it's managed, don't remove it.
+            if [[ "$ORIGINAL_SOURCE" == "$DOTFILES_DIR"* ]]; then
+                IS_MANAGED=true
+            fi
+        fi
+
+        if [ "$IS_MANAGED" = true ]; then
+            echo "Item $DEST_PATH is already managed by this repo (symlink points inward). Not removing it."
+        else
+            # If it's a real file/folder OR an unmanaged symlink, remove it.
+            echo "Item $DEST_PATH is a conflict. Removing it to make way for stow."
+            rm -rf "$DEST_PATH"
+        fi
+
     else
-        echo "No existing file/symlink found for $item. No backup needed."
+        echo "No existing file/symlink found for $item. No conflict."
     fi
 done
 echo "✅ Backup phase complete."
