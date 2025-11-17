@@ -33,10 +33,18 @@ sudo pacman -Syu --needed --noconfirm git base-devel fakeroot
 # echo "==> Clone dotfiles repository..."
 
 
-# --- Set variables ---
-DOTFILES_REPO=$(dirname "$(realpath "$0")")
-PKG_FILE="$DOTFILES_REPO/packages.txt"
-AUR_FILE="$DOTFILES_REPO/aur-packages.txt"
+# --- Configuration ---
+# The location of the main dotfiles directory
+DOTFILES_DIR="$HOME/.dotfiles"
+# The name of the specific 'package' folder within DOTFILES_DIR to stow
+PACKAGE_NAME="dots-niri"
+# The directory where stow will deploy the files (your home directory)
+TARGET_DIR="$HOME"
+# The directory where backups will be stored
+BACKUP_DIR="$HOME/.dotfiles_backup_$(date +%Y%m%d-%H%M%S)"
+# The files where the packages to install are configured
+PKG_FILE="$DOTFILES_DIR/$PACKAGE_NAME/packages.txt"
+AUR_FILE="$DOTFILES_DIR/$PACKAGE_NAME/aur-packages.txt"
 
 echo "==> Installing required packages..."
 # --- Pacman packages ---
@@ -109,7 +117,17 @@ if ! command -v stow >/dev/null 2>&1; then
 fi
 
 echo "==> Creating symlinks with stow..."
-cd "$HOME/.dotfiles"
-stow --target="$HOME" dots-niri
+# --- Run Stow ---
+echo "Running stow for the '$PACKAGE_NAME' package..."
+
+# Change directory to the parent of the 'mydots' package (where stow operates from)
+cd "$DOTFILES_DIR"
+
+# Run stow:
+# -v: verbose output
+# -t $HOME: sets the target directory to $HOME
+stow -v -t "$HOME" "$PACKAGE_NAME"
+
+echo "Stow process finished successfully."
 
 echo "==> Done! 🎉"
