@@ -2,7 +2,6 @@
 spawn-at-startup "waybar"
 spawn-at-startup "mako"
 spawn-at-startup "hyprpaper"
-spawn-at-startup "hypridle"
 spawn-at-startup "/usr/lib64/mate-polkit/polkit-mate-authentication-agent-1"
 // spawn-sh-at-startup "wlsunset -l -12.1142476 -L -77.0104654 -t 4000 -T 6500 -d 300"
 

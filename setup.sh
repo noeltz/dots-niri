@@ -195,7 +195,9 @@ cd "$DOTFILES_DIR"
 # -v: verbose output
 # -t $HOME: sets the target directory to $HOME
 stow -v -t "$HOME" "$PACKAGE_NAME"
-
 echo "Stow process finished successfully."
+
+echo "==> Creating systemd user services..."
+systemctl --user add-wants niri.service hypridle.service
 
 echo "==> Done! 🎉"

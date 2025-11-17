@@ -62,5 +62,6 @@ wl-clipboard
 wlsunset
 xarchiver
 xed
+xwayland-satellite
 yazi
 zip
