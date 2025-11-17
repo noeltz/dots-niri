@@ -5,10 +5,9 @@ echo "==> Starting setup for niri dotfiles...."
 
 # --- Preflight checks ---
 echo "==> Check if os is 'Arch Linux'..."
-EXPECTED_OS="Arch Linux"
 if [ -f /etc/os-release ]; then
     . /etc/os-release
-    if [ "$NAME" != "$EXPECTED_OS" ]; then
+    if [ "$NAME" != "Arch Linux" ] | [ "$NAME" != "CachyOS Linux" ]; then
         echo "Error: This script is only intended for $EXPECTED_OS."
         echo "Detected OS: $NAME"
         exit 1
