@@ -1,13 +1,44 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "==> Starting setup for niri dotfiles...."
+
+# --- Preflight checks ---
+echo "==> Check if os is 'Arch Linux'..."
+EXPECTED_OS="Arch Linux"
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    if [ "$NAME" != "$EXPECTED_OS" ]; then
+        echo "Error: This script is only intended for $EXPECTED_OS."
+        echo "Detected OS: $NAME"
+        exit 1
+    else
+        echo "OS check passed: $NAME detected."
+    fi
+else
+    echo "Warning: Cannot determine the OS using /etc/os-release."
+    exit 1
+fi
+
+echo "==> Check if pacman is installed and up to date..."
+if ! command -v pacman &> /dev/null; then
+    echo "Error: 'pacman' is not installed or not in the PATH."
+    echo "This script is intended for Arch Linux or Arch-based systems."
+    exit 1
+fi
+
+echo "==> Make sure git is installed..."
+sudo pacman -Syu --needed --noconfirm git base-devel fakeroot
+
+# echo "==> Clone dotfiles repository..."
+
+
+# --- Set variables ---
 DOTFILES_REPO=$(dirname "$(realpath "$0")")
 PKG_FILE="$DOTFILES_REPO/packages.txt"
 AUR_FILE="$DOTFILES_REPO/aur-packages.txt"
 
-echo "==> Starting setup for niri dotfiles...."
 echo "==> Installing required packages..."
-
 # --- Pacman packages ---
 if [[ -f "$PKG_FILE" ]]; then
     echo -e "\n📦 Installing packages from 'packages.txt'..."
