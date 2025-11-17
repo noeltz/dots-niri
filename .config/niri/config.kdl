@@ -1,15 +1,15 @@
 // Autostart
-spawn-sh-at-startup "waybar"
-spawn-sh-at-startup "mako"
-spawn-sh-at-startup "hyprpaper"
-spawn-sh-at-startup "hypridle"
-spawn-sh-at-startup "wlsunset -l -12.1142476 -L -77.0104654 -t 4000 -T 6500 -d 300"
+spawn-at-startup "waybar"
+spawn-at-startup "mako"
+spawn-at-startup "hyprpaper"
+spawn-at-startup "hypridle"
+// spawn-sh-at-startup "wlsunset -l -12.1142476 -L -77.0104654 -t 4000 -T 6500 -d 300"
 
 prefer-no-csd
 
 // You can also set this to null to disable saving screenshots to disk.
-screenshot-path null
-// screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
+// screenshot-path null
+screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
 
 // Overview
 overview {
@@ -31,13 +31,34 @@ input {
     }
 
     touchpad {
+        // off
+        tap
+        dwt
+        // dwtp
+        // drag false
+        // drag-lock
+        natural-scroll
+        // accel-speed 0.2
+        // accel-profile "flat"
+        // scroll-method "two-finger"
+        // disabled-on-external-mouse
         tap
         natural-scroll
     }
 
     mouse {
+        // off
+        // natural-scroll
         accel-speed 0
+        // accel-profile "flat"
+        // scroll-method "no-scroll"
     }
+    warp-mouse-to-focus
+}
+
+cursor {
+    hide-when-typing
+    hide-after-inactive-ms 4000
 }
 
 // https://yalter.github.io/niri/Configuration:-Outputs
@@ -94,6 +115,12 @@ layout {
     struts {}
 }
 
+hotkey-overlay {
+    // Uncomment this line to disable the "Important Hotkeys" pop-up at startup.
+    skip-at-startup
+}
+
+
 // Animation.
 animations {
     // off
@@ -103,25 +130,26 @@ animations {
 }
 
 binds {
-    Mod+O repeat=false { toggle-overview; }
-    Mod+Q repeat=false { close-window; }
-    Mod+Return    { spawn "kitty"; }
-    Mod+B         { spawn "google-chrome-stable"; }
-    Mod+E         { spawn "kitty" "--class" "yazi" "-e" "yazi"; }
-    Mod+L         { spawn "hyprlock"; }
-    Mod+Ctrl+Return     { spawn ".config/rofi/launcher.sh"; }
-    Mod+P         { spawn ".config/rofi/colorpicker.sh"; }
-    Mod+Backspace { spawn ".config/rofi/powermenu.sh"; }
+    Mod+Ctrl+k                                                 { show-hotkey-overlay; }
+    Mod+O repeat=false                                         { toggle-overview; }
+    Mod+Q repeat=false                                         { close-window; }
+    Mod+Return hotkey-overlay-title="Open a Terminal"          { spawn "kitty"; }
+    Mod+B hotkey-overlay-title="Open Chrome"                   { spawn "google-chrome-stable"; }
+    Mod+E                                                      { spawn-sh "kitty" "--class" "yazi" "-e" "yazi"; }
+    Mod+L                                                      { spawn "hyprlock"; }
+    Mod+Ctrl+Return                                            { spawn-sh ".config/rofi/launcher.sh"; }
+    Mod+P                                                      { spawn-sh ".config/rofi/colorpicker.sh"; }
+    Mod+Backspace                                              { spawn-sh ".config/rofi/powermenu.sh"; }
  
 	// Pipewire
-    XF86AudioRaiseVolume allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@"   "0.1+"; }
-    XF86AudioLowerVolume allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@"   "0.1-"; }
-    XF86AudioMute        allow-when-locked=true { spawn "wpctl" "set-mute"   "@DEFAULT_AUDIO_SINK@"   "toggle"; }
-    XF86AudioMicMute     allow-when-locked=true { spawn "wpctl" "set-mute"   "@DEFAULT_AUDIO_SOURCE@" "toggle"; }
+    XF86AudioRaiseVolume allow-when-locked=true { spawn-sh "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@"   "0.1+"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn-sh "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@"   "0.1-"; }
+    XF86AudioMute        allow-when-locked=true { spawn-sh "wpctl" "set-mute"   "@DEFAULT_AUDIO_SINK@"   "toggle"; }
+    XF86AudioMicMute     allow-when-locked=true { spawn-sh "wpctl" "set-mute"   "@DEFAULT_AUDIO_SOURCE@" "toggle"; }
 
     // Brightness 
-    XF86MonBrightnessUp   allow-when-locked=true { spawn "brightnessctl" "--class=backlight" "set" "+10%"; }
-    XF86MonBrightnessDown allow-when-locked=true { spawn "brightnessctl" "--class=backlight" "set" "10%-"; }
+    XF86MonBrightnessUp   allow-when-locked=true { spawn-sh "brightnessctl" "--class=backlight" "set" "+10%"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn-sh "brightnessctl" "--class=backlight" "set" "10%-"; }
 
     Mod+Left  { focus-column-left; }
     Mod+Down  { focus-window-down; }
