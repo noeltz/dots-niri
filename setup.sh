@@ -115,11 +115,47 @@ if ! command -v stow >/dev/null 2>&1; then
     sudo pacman -S --needed --noconfirm stow
 fi
 
+
+echo "==> Starting backup and stow process..."
+echo "Targeting package: $PACKAGE_NAME"
+echo "Backing up to: $BACKUP_DIR"
+
+# Create the backup directory
+mkdir -p "$BACKUP_DIR"
+echo "Created backup directory $BACKUP_DIR"
+
+# Navigate into the package directory where the source files are
+cd "$DOTFILES_DIR/$PACKAGE_NAME"
+
+# Iterate through all source files/directories
+for item in .*; do
+    # Skip standard directory entries
+    if [ "$item" == "." ] || [ "$item" == ".." ] || [ "$item" == ".git" ] || [ "$item" == ".gitignore" ] || [ "$item" == ".stow-local-ignore" ] || [ "$item" == "setup.sh" ] || [ "$item" == "packages.txt" ] || [ "$item" == "aur-packages.txt" ]; then
+        continue
+    fi
+    # Calculate the potential destination path in $HOME
+    DEST_PATH="$TARGET_DIR/$item"
+    # Calculate where it should go in the backup folder
+    BACKUP_PATH="$BACKUP_DIR/$item"
+    # Check if a real file/folder exists at the destination (and is not a symlink)
+    if [ -e "$DEST_PATH" ] && [ ! -L "$DEST_PATH" ]; then
+        echo "Found existing file/directory: $DEST_PATH. Backing up..."
+        # Move the item to the backup directory
+        mv "$DEST_PATH" "$BACKUP_PATH"
+        echo "Moved to $BACKUP_PATH"
+    elif [ -L "$DEST_PATH" ]; then
+        echo "Found existing symlink: $DEST_PATH. Leaving it be (stow will handle conflicts)."
+    else
+        echo "No existing file found for $item. No backup needed."
+    fi
+done
+echo "✅ Backup phase complete."
+
 echo "==> Creating symlinks with stow..."
 # --- Run Stow ---
 echo "Running stow for the '$PACKAGE_NAME' package..."
 
-# Change directory to the parent of the 'mydots' package (where stow operates from)
+# Change directory to the parent of the dotfile package (where stow operates from)
 cd "$DOTFILES_DIR"
 
 # Run stow:
