@@ -136,21 +136,21 @@ binds {
     Mod+Q repeat=false                                         { close-window; }
     Mod+Return hotkey-overlay-title="Open a Terminal"          { spawn "kitty"; }
     Mod+B hotkey-overlay-title="Open Chrome"                   { spawn "google-chrome-stable"; }
-    Mod+E                                                      { spawn-sh "kitty" "--class" "yazi" "-e" "yazi"; }
+    Mod+E                                                      { spawn-sh "kitty --class yazi -e yazi"; }
     Mod+L                                                      { spawn "hyprlock"; }
     Mod+Ctrl+Return                                            { spawn-sh ".config/rofi/launcher.sh"; }
     Mod+P                                                      { spawn-sh ".config/rofi/colorpicker.sh"; }
     Mod+Backspace                                              { spawn-sh ".config/rofi/powermenu.sh"; }
  
 	// Pipewire
-    XF86AudioRaiseVolume allow-when-locked=true { spawn-sh "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@"   "0.1+"; }
-    XF86AudioLowerVolume allow-when-locked=true { spawn-sh "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@"   "0.1-"; }
-    XF86AudioMute        allow-when-locked=true { spawn-sh "wpctl" "set-mute"   "@DEFAULT_AUDIO_SINK@"   "toggle"; }
-    XF86AudioMicMute     allow-when-locked=true { spawn-sh "wpctl" "set-mute"   "@DEFAULT_AUDIO_SOURCE@" "toggle"; }
+    XF86AudioRaiseVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.1+"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.1-"; }
+    XF86AudioMute        allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"; }
+    XF86AudioMicMute     allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"; }
 
     // Brightness 
-    XF86MonBrightnessUp   allow-when-locked=true { spawn-sh "brightnessctl" "--class=backlight" "set" "+10%"; }
-    XF86MonBrightnessDown allow-when-locked=true { spawn-sh "brightnessctl" "--class=backlight" "set" "10%-"; }
+    XF86MonBrightnessUp   allow-when-locked=true { spawn-sh "brightnessctl --class=backlight set +10%"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn-sh "brightnessctl --class=backlight set 10%-"; }
 
     Mod+Left  { focus-column-left; }
     Mod+Down  { focus-window-down; }
