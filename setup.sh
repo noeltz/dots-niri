@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOTFILES_REPO="$HOME/.dotfiles/dots-niri"
+DOTFILES_REPO=$(dirname "$(realpath "$0")")
 PKG_FILE="$DOTFILES_REPO/packages.txt"
 AUR_FILE="$DOTFILES_REPO/aur-packages.txt"
 
@@ -24,14 +24,13 @@ else
     echo "⚠️  No 'packages.txt' found, skipped."
 fi
 
-# --- Install yay if not installed ---
-if ! command -v yay >/dev/null 2>&1; then
-    echo "==> yay not found, installing..."
-    sudo pacman -S --needed --noconfirm git base-devel
-    tmpdir=$(mktemp -d)
-    git clone https://aur.archlinux.org/yay.git "$tmpdir/yay"
-    (cd "$tmpdir/yay" && makepkg -si --noconfirm)
-    rm -rf "$tmpdir"
+# --- Install paru if not installed ---
+if ! command -v paru > /dev/null; then
+    # Download the binary version to avoid compilation
+    git clone https://aur.archlinux.org/paru-bin.git ~/repos/paru-bin
+    cd ~/repos/paru-bin
+    makepkg --syncdeps --install
+    cd -
 fi
 
 # --- AUR packages ---
@@ -39,9 +38,9 @@ if [[ -f "$AUR_FILE" ]]; then
     echo -e "\n🌟 Installing AUR packages from 'aur-packages.txt'..."
     while IFS= read -r aurpkg; do
         [[ -z "$aurpkg" || "$aurpkg" == \#* ]] && continue
-        if ! yay -Q "$aurpkg" &>/dev/null; then
+        if ! paru -Q "$aurpkg" &>/dev/null; then
             echo "  ➜ Installing $aurpkg..."
-            yay -S --needed --noconfirm "$aurpkg"
+            paru -S --needed --noconfirm "$aurpkg"
         else
             echo "  ✓ $aurpkg already installed"
         fi
@@ -71,11 +70,6 @@ if command -v ly-dm >/dev/null 2>&1; then
 else
     echo "⚠️ ly not found, skipped enabling display manager."
 fi
-
-# --- Make scripts executable ---
-echo "==> Making scripts executable..."
-chmod +x "$DOTFILES_REPO/.config/rofi/*.sh"
-chmod +x "$DOTFILES_REPO/.config/scripts/*.sh"
 
 # --- Check stow ---
 if ! command -v stow >/dev/null 2>&1; then
