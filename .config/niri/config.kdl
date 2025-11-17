@@ -43,8 +43,6 @@ input {
         // accel-profile "flat"
         // scroll-method "two-finger"
         // disabled-on-external-mouse
-        tap
-        natural-scroll
     }
 
     mouse {
