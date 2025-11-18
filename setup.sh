@@ -131,43 +131,57 @@ cd "$DOTFILES_DIR"
 
 # Loop through each package (directory) in the dotfiles repo
 for package in */; do
-    # Skip non-directory items or the script itself
-    if [ ! -d "$package" ]; then
-        continue
-    fi
+    # Remove trailing slash from package name
+    package_name=$(basename "$package")
+    echo "Analyzing conflicts for package: $package_name"
 
-    echo "Processing package: $package"
-
-    # Run stow dry-run, capture errors, and check the exit status gracefully
-    # Use || true to prevent the script from stopping if the stow dry-run fails (which it does on conflict)
-    # The output is stored in a variable so we can process it
-    stow_output=$(stow -t "$TARGET_DIR" --no-folding --no -v "$package" 2>&1 || true)
-    
-    # Check if the output contains conflict messages
-    conflicts=$(echo "$stow_output" | awk '/\* since neither a link nor a directory/ {print $NF}')
-
-    if [ -n "$conflicts" ]; then
-        echo "Found conflicts for $package. Backing up and resolving..."
+    # Use find to list all potential targets in the package, then map them to actual $HOME paths
+    # We strip the leading ./ from find's output
+    conflicting_targets=""
+    while IFS= read -r source_rel_path; do
+        target_path="$TARGET_DIR/$source_rel_path"
         
-        for conflict_path in $conflicts; do
+        # Check if the target path exists (as a file, dir, or symlink) 
+        # and is NOT already a symlink pointing back into our repo
+        if [ -e "$target_path" ] || [ -L "$target_path" ]; then
+            is_managed=false
+            if [ -L "$target_path" ]; then
+                # readlink -f gets the actual source path
+                actual_source=$(readlink -f "$target_path")
+                if [[ "$actual_source" == "$DOTFILES_DIR"* ]]; then
+                    is_managed=true
+                fi
+            fi
+
+            if [ "$is_managed" = false ]; then
+                # This item is a conflict that needs backing up/removal
+                conflicting_targets="$conflicting_targets $source_rel_path"
+            fi
+        fi
+
+    done < <(find "$package_name" -printf "%P\n" | grep -v "^$" | grep -v "^\.")
+
+    # Process conflicts if any were found
+    if [ -n "$conflicting_targets" ]; then
+        echo "Found actual conflicts for $package_name. Backing up and resolving..."
+        
+        for conflict_path in $conflicting_targets; do
             full_path="$TARGET_DIR/$conflict_path"
             
-            # Ensure the parent directory for the backup path exists
+            # Ensure the backup directory structure is ready
             mkdir -p "$(dirname "$BACKUP_DIR/$conflict_path")"
             
             # Move the conflicting file/directory to the backup location
-            if [ -e "$full_path" ]; then
+            if [ -e "$full_path" ] || [ -L "$full_path" ]; then
                 mv "$full_path" "$BACKUP_DIR/$conflict_path"
                 echo "Moved existing '$full_path' to '$BACKUP_DIR/$conflict_path'"
-                stow -v -R -t "$TARGET_DIR" $package --no-folding
-            else
-                echo "Warning: Conflict reported for '$full_path', but it doesn't exist. Skipping backup."
             fi
         done
     else
-        echo "No conflicts found for $package during dry run."
-        stow -v -R -t "$TARGET_DIR" $package --no-folding
+        echo "No unmanaged conflicts found for $package_name."
     fi
+    echo "Stowing $package_name..."
+    stow -R --no-folding -t "$TARGET_DIR" $package
 done
 
 echo "Backup and stow process finished successfully."
@@ -175,4 +189,4 @@ echo "Backup and stow process finished successfully."
 echo "==> Creating systemd user services..."
 systemctl --user add-wants niri.service hypridle.service
 
-echo "==> Done! 🎉"
+echo "==> 
