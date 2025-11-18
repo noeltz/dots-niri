@@ -140,7 +140,8 @@ for package_dir in */; do
     package_name=$(basename "$package_dir")
     echo "Analyzing conflicts for package: $package_name"
 
-    # Use find to generate a list of relative paths within the package
+    # Use find to list all files/directories within the package (excluding the package root itself)
+    # This generates relative paths like ".config/paru/paru.conf"
     find "$package_dir" -not -path "$package_dir" -printf "%P\n" | while IFS= read -r source_rel_path; do
         
         if [[ -z "$source_rel_path" ]]; then
@@ -150,6 +151,7 @@ for package_dir in */; do
         # The full path where this file would link to in $HOME
         full_target_path="$TARGET_DIR/$source_rel_path"
         
+        # Check if the target path exists in $HOME (as a file, dir, or symlink)
         if [ -e "$full_target_path" ] || [ -L "$full_target_path" ]; then
             
             is_managed=false
@@ -161,17 +163,18 @@ for package_dir in */; do
             fi
 
             if [ "$is_managed" = false ]; then
-                # This item is a conflict that needs backing up/removal
+                # This item is an unmanaged conflict
                 echo "Found unmanaged conflict: $full_target_path. Backing up and resolving..."
                 
-                # --- CRITICAL CHANGE HERE ---
-                # Define the backup location using the relative path
+                # --- CRITICAL SAFETY CHECK AND MOVE ---
                 backup_location="$BACKUP_DIR/$source_rel_path"
 
-                # Ensure the parent directory in the backup location exists
+                # Ensure ONLY the parent directory in the backup location is created
                 mkdir -p "$(dirname "$backup_location")"
                 
-                # Move ONLY the specific conflicting item to the backup location
+                # Move ONLY the specific conflicting item ($full_target_path) 
+                # into the $backup_location path.
+                # This safely handles moving a single file or a directory structure itself.
                 mv "$full_target_path" "$backup_location"
                 echo "Moved existing '$full_target_path' to '$backup_location'"
             fi
