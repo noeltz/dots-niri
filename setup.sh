@@ -118,6 +118,12 @@ if ! command -v stow >/dev/null 2>&1; then
     sudo pacman -S --needed --noconfirm stow
 fi
 
+# --- Check rsync ---
+if ! command -v rsync >/dev/null 2>&1; then
+    echo "==> rsync not found, installing..."
+    sudo pacman -S --needed --noconfirm rsync
+fi
+
 echo "==> Backup existing dotfiles and create symlinks with stow..."
 echo "Dotfiles repository: $DOTFILES_DIR"
 echo "Backup directory: $BACKUP_DIR"
@@ -130,59 +136,50 @@ echo "Created backup directory: $BACKUP_DIR"
 cd "$DOTFILES_DIR"
 
 # --- Conflict Resolution Loop ---
-# Loop through each package (directory) in the dotfiles repo (e.g., bat, nvim, paru)
 for package_dir in */; do
     package_name=$(basename "$package_dir")
     echo "Analyzing conflicts for package: $package_name"
 
-    conflicting_targets=()
+    # Use rsync dry-run to identify files that already exist in $TARGET_DIR
+    # -a: archive mode (preserves permissions, recursive)
+    # -n: dry run (no changes)
+    # --delete-after: important for correct conflict listing behavior
+    # We target the contents *inside* the package for rsync comparison
     
-    # Use find to iterate over every file/directory within the package
-    # -printf "%P\n" gives the path relative to the package dir (e.g., .config/paru/paru.conf)
-    while IFS= read -r source_rel_path; do
-        
-        # Skip empty lines or dot-files in root of package that stow ignores by default (e.g. .git)
-        if [[ -z "$source_rel_path" ]] || [[ "$source_rel_path" == .* ]]; then
-            continue
-        fi
+    # Run rsync dry run, capturing the list of existing files it encounters
+    # We pipe the output into a variable, filtering for lines starting with >
+    conflicts_output=$(rsync -an --delete-after "$package_name/" "$TARGET_DIR/" | grep '^\>')
 
-        target_path="$TARGET_DIR/$source_rel_path"
-        
-        # Check if something exists at the target path that would block stow
-        if [ -e "$target_path" ] || [ -L "$target_path" ]; then
-            
+    if [ -n "$conflicts_output" ]; then
+        echo "Found unmanaged conflicts for $package_name. Backing up and resolving..."
+
+        # Extract the paths from the rsync output (which gives relative paths starting after the >)
+        # We process these lines one by one to get the exact file path
+        while IFS= read -r line; do
+            # Extract the relative path (remove the '> .rwxr... ') part of the line
+            conflict_rel_path=$(echo "$line" | awk '{print $2}')
+            full_path="$TARGET_DIR/$conflict_rel_path"
+
+            # Check again that the path isn't a pre-existing symlink pointing to *this* repo
             is_managed=false
-            if [ -L "$target_path" ]; then
-                # Check if the existing item is a symlink pointing into our current repo
-                actual_source=$(readlink -f "$target_path")
+            if [ -L "$full_path" ]; then
+                actual_source=$(readlink -f "$full_path")
                 if [[ "$actual_source" == "$DOTFILES_DIR"* ]]; then
                     is_managed=true
                 fi
             fi
 
             if [ "$is_managed" = false ]; then
-                # If it's not a symlink we manage, it's a conflict
-                conflicting_targets+=("$source_rel_path")
-            fi
-        fi
-
-    done < <(find "$package_name" -not -path "$package_name" -printf "%P\n")
-
-    # Process conflicts for this specific package
-    if [ ${#conflicting_targets[@]} -gt 0 ]; then
-        echo "Found unmanaged conflicts for $package_name. Backing up and resolving..."
-        
-        for conflict_path in "${conflicting_targets[@]}"; do
-            full_path="$TARGET_DIR/$conflict_path"
-            
-            if [ -e "$full_path" ] || [ -L "$full_path" ]; then
                 echo "Moving conflicting item: $full_path to backup location."
                 # Ensure backup directory structure exists
-                mkdir -p "$(dirname "$BACKUP_DIR/$conflict_path")"
+                mkdir -p "$(dirname "$BACKUP_DIR/$conflict_rel_path")"
                 # Move the item
-                mv "$full_path" "$BACKUP_DIR/$conflict_path"
+                mv "$full_path" "$BACKUP_DIR/$conflict_rel_path"
+            else
+                echo "Conflict detected, but $full_path is already a managed symlink. Skipping move."
             fi
-        done
+        done <<< "$conflicts_output"
+
     else
         echo "No unmanaged conflicts found for $package_name."
     fi
