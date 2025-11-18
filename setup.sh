@@ -136,7 +136,6 @@ echo "Created backup directory: $BACKUP_DIR"
 cd "$DOTFILES_DIR"
 
 # --- Conflict Resolution Loop ---
-# Loop through each package (directory) in the dotfiles repo (e.g., bat, nvim, paru)
 for package_dir in */; do
     package_name=$(basename "$package_dir")
     echo "Analyzing conflicts for package: $package_name"
@@ -144,7 +143,6 @@ for package_dir in */; do
     # Use find to generate a list of relative paths within the package
     find "$package_dir" -not -path "$package_dir" -printf "%P\n" | while IFS= read -r source_rel_path; do
         
-        # Skip empty lines or temporary files
         if [[ -z "$source_rel_path" ]]; then
             continue
         fi
@@ -152,12 +150,10 @@ for package_dir in */; do
         # The full path where this file would link to in $HOME
         full_target_path="$TARGET_DIR/$source_rel_path"
         
-        # Check if the target path exists in $HOME (as a file, dir, or symlink)
         if [ -e "$full_target_path" ] || [ -L "$full_target_path" ]; then
             
             is_managed=false
             if [ -L "$full_target_path" ]; then
-                # Check if the existing item is a symlink pointing back into our repo
                 actual_source=$(readlink -f "$full_target_path")
                 if [[ "$actual_source" == "$DOTFILES_DIR"* ]]; then
                     is_managed=true
@@ -168,15 +164,17 @@ for package_dir in */; do
                 # This item is a conflict that needs backing up/removal
                 echo "Found unmanaged conflict: $full_target_path. Backing up and resolving..."
                 
-                # Ensure the backup directory structure is ready
-                mkdir -p "$(dirname "$BACKUP_DIR/$source_rel_path")"
+                # --- CRITICAL CHANGE HERE ---
+                # Define the backup location using the relative path
+                backup_location="$BACKUP_DIR/$source_rel_path"
+
+                # Ensure the parent directory in the backup location exists
+                mkdir -p "$(dirname "$backup_location")"
                 
-                # Move the conflicting file/directory to the backup location
-                mv "$full_target_path" "$BACKUP_DIR/$source_rel_path"
-                echo "Moved existing '$full_target_path' to '$BACKUP_DIR/$source_rel_path'"
-            # else: It's a managed symlink, we leave it alone.
+                # Move ONLY the specific conflicting item to the backup location
+                mv "$full_target_path" "$backup_location"
+                echo "Moved existing '$full_target_path' to '$backup_location'"
             fi
-        # else: Path doesn't exist in $HOME, no conflict, continue to the next file.
         fi
     done
     echo "Finished conflict analysis for $package_name."
