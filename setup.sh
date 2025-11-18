@@ -136,46 +136,50 @@ echo "Created backup directory: $BACKUP_DIR"
 cd "$DOTFILES_DIR"
 
 # --- Conflict Resolution Loop ---
+# Loop through each package (directory) in the dotfiles repo (e.g., bat, nvim, paru)
 for package_dir in */; do
     package_name=$(basename "$package_dir")
     echo "Analyzing conflicts for package: $package_name"
 
-    # Run rsync dry-run, capture output, and ignore its exit status using || true
-    rsync_output=$(rsync -an --delete-after "$package_name/" "$TARGET_DIR/" 2>&1 || true)
-    
-    # Filter the output for lines starting with '>' which indicate files to be transferred/conflicts
-    conflicts_output=$(echo "$rsync_output" | grep '^\>')
+    # Use find to generate a list of relative paths within the package
+    find "$package_dir" -not -path "$package_dir" -printf "%P\n" | while IFS= read -r source_rel_path; do
+        
+        # Skip empty lines or temporary files
+        if [[ -z "$source_rel_path" ]]; then
+            continue
+        fi
 
-    if [ -n "$conflicts_output" ]; then
-        echo "Found unmanaged conflicts for $package_name. Backing up and resolving..."
-
-        while IFS= read -r line; do
-            # Extract the relative path (remove the '> .rwxr... ') part of the line
-            conflict_rel_path=$(echo "$line" | awk '{print $2}')
-            full_path="$TARGET_DIR/$conflict_rel_path"
-
+        # The full path where this file would link to in $HOME
+        full_target_path="$TARGET_DIR/$source_rel_path"
+        
+        # Check if the target path exists in $HOME (as a file, dir, or symlink)
+        if [ -e "$full_target_path" ] || [ -L "$full_target_path" ]; then
+            
             is_managed=false
-            if [ -L "$full_path" ]; then
-                actual_source=$(readlink -f "$full_path")
+            if [ -L "$full_target_path" ]; then
+                # Check if the existing item is a symlink pointing back into our repo
+                actual_source=$(readlink -f "$full_target_path")
                 if [[ "$actual_source" == "$DOTFILES_DIR"* ]]; then
                     is_managed=true
                 fi
             fi
 
             if [ "$is_managed" = false ]; then
-                echo "Moving conflicting item: $full_path to backup location."
-                # Ensure backup directory structure exists
-                mkdir -p "$(dirname "$BACKUP_DIR/$conflict_rel_path")"
-                # Move the item
-                mv "$full_path" "$BACKUP_DIR/$conflict_rel_path"
-            else
-                echo "Conflict detected, but $full_path is already a managed symlink. Skipping move."
+                # This item is a conflict that needs backing up/removal
+                echo "Found unmanaged conflict: $full_target_path. Backing up and resolving..."
+                
+                # Ensure the backup directory structure is ready
+                mkdir -p "$(dirname "$BACKUP_DIR/$source_rel_path")"
+                
+                # Move the conflicting file/directory to the backup location
+                mv "$full_target_path" "$BACKUP_DIR/$source_rel_path"
+                echo "Moved existing '$full_target_path' to '$BACKUP_DIR/$source_rel_path'"
+            # else: It's a managed symlink, we leave it alone.
             fi
-        done <<< "$conflicts_output"
-
-    else
-        echo "No unmanaged conflicts found for $package_name."
-    fi
+        # else: Path doesn't exist in $HOME, no conflict, continue to the next file.
+        fi
+    done
+    echo "Finished conflict analysis for $package_name."
 done
 
 for package_dir in */; do
