@@ -71,7 +71,7 @@ binds {
 
     // ─── Extras ───
     MOD+BACKSPACE                          hotkey-overlay-title="Powermenu" { spawn-sh ".config/rofi/powermenu.sh"; }
-    MOD+P                                  hotkey-overlay-title="Colorpicker { spawn-sh ".config/rofi/colorpicker.sh"; }
+    MOD+P                                  hotkey-overlay-title="Colorpicker" { spawn-sh ".config/rofi/colorpicker.sh"; }
 
     // ─── Audio Controls ───
     // Example volume keys mappings for PipeWire & WirePlumber.
