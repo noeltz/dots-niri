@@ -138,11 +138,13 @@ for package in */; do
 
     echo "Processing package: $package"
 
-    # Identify conflicts using stow's dry-run mode
-    # --no: Perform dry run (no changes)
-    # -v: Verbose output to capture conflict messages
-    # -t: Target directory
-    conflicts=$(stow -t "$TARGET_DIR" --no -v "$package" 2>&1 | awk '/\* since neither a link nor a directory/ {print $NF}')
+    # Run stow dry-run, capture errors, and check the exit status gracefully
+    # Use || true to prevent the script from stopping if the stow dry-run fails (which it does on conflict)
+    # The output is stored in a variable so we can process it
+    stow_output=$(stow -t "$TARGET_DIR" --no-folding --no -v "$package_name" 2>&1 || true)
+    
+    # Check if the output contains conflict messages
+    conflicts=$(echo "$stow_output" | awk '/\* existing target is neither a link nor a directory/ {print $NF}')
 
     if [ -n "$conflicts" ]; then
         echo "Found conflicts for $package. Backing up and resolving..."
