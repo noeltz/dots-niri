@@ -44,6 +44,7 @@ pipewire
 pipewire-alsa
 pipewire-pulse
 poppler
+qt5ct
 resvg
 ripgrep
 rofi
