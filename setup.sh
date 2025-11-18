@@ -31,79 +31,13 @@ sudo pacman -Syu --needed --noconfirm git base-devel fakeroot
 
 # --- Configuration ---
 # The location of the main dotfiles directory
-DOTFILES_DIR="$HOME/.dotfiles"
-# The name of the specific 'package' folder within DOTFILES_DIR to stow
-PACKAGE_NAME="dots-niri"
+DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # The directory where stow will deploy the files (your home directory)
 TARGET_DIR="$HOME"
-
-# --- Backup current dotfiles ---
-echo "==> Starting backup process..."
+# The directory where backups will be stored
 BACKUP_DIR="$HOME/.dotfiles_backup_$(date +%Y%m%d-%H%M%S)"
-sudo pacman -Syu --needed --noconfirm rsync
-echo "Targeting package: $PACKAGE_NAME"
-echo "Backing up to: $BACKUP_DIR"
 
-# Create the backup directory
-mkdir -p "$BACKUP_DIR"
-echo "Created backup directory $BACKUP_DIR"
 
-# Navigate into the package directory where the source files are
-cd "$DOTFILES_DIR/$PACKAGE_NAME"
-
-# Iterate through all source files/directories
-for item in .*; do
-    # Skip standard directory entries
-    if [ "$item" == "." ] || [ "$item" == ".." ] || [ "$item" == ".git" ] || [ "$item" == ".gitignore" ] || [ "$item" == ".stow-local-ignore" ] || [ "$item" == "setup.sh" ] || [ "$item" == "packages.txt" ] || [ "$item" == "aur-packages.txt" ]; then
-        continue
-    fi
-    DEST_PATH="$TARGET_DIR/$item"
-    
-    # Check if *anything* exists at the destination path
-    if [ -e "$DEST_PATH" ] || [ -L "$DEST_PATH" ]; then
-
-        ORIGINAL_SOURCE=""
-        # 1. Determine where the actual data lives
-        if [ -L "$DEST_PATH" ]; then
-            ORIGINAL_SOURCE=$(readlink -f "$DEST_PATH")
-        else
-            ORIGINAL_SOURCE="$DEST_PATH"
-        fi
-
-        # 2. ALWAYS back up the original data, regardless of where it is
-        if [ -e "$ORIGINAL_SOURCE" ]; then
-            echo "Found existing item: $DEST_PATH. Backing up the original content from $ORIGINAL_SOURCE..."
-            # Ensure path structure is maintained in backup directory
-            mkdir -p "$BACKUP_DIR/$(dirname "$item")"
-            # Use rsync to copy the actual data into the backup directory
-            rsync -a "$ORIGINAL_SOURCE" "$BACKUP_DIR/$item"
-            echo "Copied data to $BACKUP_DIR/$item"
-        else
-            echo "Note: $DEST_PATH existed but its target $ORIGINAL_SOURCE did not (broken link?). Skipping data backup."
-        fi
-
-        # 3. Determine if the item needs to be REMOVED to make way for stow
-        IS_MANAGED=false
-        if [ -L "$DEST_PATH" ]; then
-            # If it's a symlink pointing into our repo, it's managed, don't remove it.
-            if [[ "$ORIGINAL_SOURCE" == "$DOTFILES_DIR"* ]]; then
-                IS_MANAGED=true
-            fi
-        fi
-
-        if [ "$IS_MANAGED" = true ]; then
-            echo "Item $DEST_PATH is already managed by this repo (symlink points inward). Not removing it."
-        else
-            # If it's a real file/folder OR an unmanaged symlink, remove it.
-            echo "Item $DEST_PATH is a conflict. Removing it to make way for stow."
-            rm -rf "$DEST_PATH"
-        fi
-
-    else
-        echo "No existing file/symlink found for $item. No conflict."
-    fi
-done
-echo "✅ Backup phase complete."
 
 
 # PLACEHOLDER echo "==> Clone dotfiles repository..."
@@ -113,8 +47,8 @@ echo "✅ Backup phase complete."
 # --- Package installation ---
 echo "==> Installing required packages..."
 # The files where the packages to install are configured
-PKG_FILE="$DOTFILES_DIR/$PACKAGE_NAME/packages.txt"
-AUR_FILE="$DOTFILES_DIR/$PACKAGE_NAME/aur-packages.txt"
+PKG_FILE="$DOTFILES_DIR/packages.txt"
+AUR_FILE="$DOTFILES_DIR/aur-packages.txt"
 # --- Pacman packages ---
 if [[ -f "$PKG_FILE" ]]; then
     echo -e "\n📦 Installing packages from 'packages.txt'..."
@@ -184,17 +118,59 @@ if ! command -v stow >/dev/null 2>&1; then
     sudo pacman -S --needed --noconfirm stow
 fi
 
-echo "==> Creating symlinks with stow..."
-# --- Run Stow ---
-echo "Running stow for the '$PACKAGE_NAME' package..."
+echo "==> Backup existing dotfiles and create symlinks with stow..."
+echo "Dotfiles repository: $DOTFILES_DIR"
+echo "Backup directory: $BACKUP_DIR"
 
-# Change directory to the parent of the dotfile package (where stow operates from)
+# Create the main backup directory
+mkdir -p "$BACKUP_DIR"
+echo "Created backup directory: $BACKUP_DIR"
+
+# Navigate into the dotfiles directory
 cd "$DOTFILES_DIR"
 
-# Run stow:
-# -v: verbose output
-# -t $HOME: sets the target directory to $HOME
-stow -v -t "$HOME" "$PACKAGE_NAME"
+# Loop through each package (directory) in the dotfiles repo
+for package in */; do
+    # Skip non-directory items or the script itself
+    if [ ! -d "$package" ]; then
+        continue
+    fi
+
+    echo "Processing package: $package"
+
+    # Identify conflicts using stow's dry-run mode
+    # --no: Perform dry run (no changes)
+    # -v: Verbose output to capture conflict messages
+    # -t: Target directory
+    conflicts=$(stow -t "$TARGET_DIR" --no -v "$package" 2>&1 | awk '/\* existing target is neither a link nor a directory/ {print $NF}')
+
+    if [ -n "$conflicts" ]; then
+        echo "Found conflicts for $package. Backing up and resolving..."
+        
+        for conflict_path in $conflicts; do
+            full_path="$TARGET_DIR/$conflict_path"
+            
+            # Ensure the parent directory for the backup path exists
+            mkdir -p "$(dirname "$BACKUP_DIR/$conflict_path")"
+            
+            # Move the conflicting file/directory to the backup location
+            if [ -e "$full_path" ]; then
+                mv "$full_path" "$BACKUP_DIR/$conflict_path"
+                echo "Moved existing '$full_path' to '$BACKUP_DIR/$conflict_path'"
+            else
+                echo "Warning: Conflict reported for '$full_path', but it doesn't exist. Skipping backup."
+            fi
+        done
+    else
+        echo "No conflicts found for $package during dry run."
+    fi
+done
+
+echo "Backup phase complete. Proceeding with stow."
+
+# Run stow for all packages
+stow -t "$TARGET_DIR" . --no-folding
+
 echo "Stow process finished successfully."
 
 echo "==> Creating systemd user services..."
