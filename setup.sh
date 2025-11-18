@@ -129,59 +129,46 @@ echo "Created backup directory: $BACKUP_DIR"
 # Navigate into the dotfiles directory
 cd "$DOTFILES_DIR"
 
-# Loop through each package (directory) in the dotfiles repo
+# --- Conflict Resolution Loop ---
 for package in */; do
-    # Remove trailing slash from package name
     package_name=$(basename "$package")
-    echo "Analyzing conflicts for package: $package_name"
 
-    # Use find to list all potential targets in the package, then map them to actual $HOME paths
-    # We strip the leading ./ from find's output
-    conflicting_targets=""
-    while IFS= read -r source_rel_path; do
-        target_path="$TARGET_DIR/$source_rel_path"
+    # Run stow dry-run and capture *all* output and exit status
+    # Use '|| true' to prevent script exit if stow reports an error (which it does on conflict)
+    stow_output=$(stow -t "$TARGET_DIR" --no -v --no-folding "$package_name" 2>&1 || true)
+    stow_exit_status=$?
+
+    if [ "$stow_exit_status" -ne 0 ]; then
+        echo "Conflicts detected by stow for package: $package_name. Resolving..."
         
-        # Check if the target path exists (as a file, dir, or symlink) 
-        # and is NOT already a symlink pointing back into our repo
-        if [ -e "$target_path" ] || [ -L "$target_path" ]; then
-            is_managed=false
-            if [ -L "$target_path" ]; then
-                # readlink -f gets the actual source path
-                actual_source=$(readlink -f "$target_path")
-                if [[ "$actual_source" == "$DOTFILES_DIR"* ]]; then
-                    is_managed=true
+        # Parse the output for conflicting paths. We look for the path at the end of the conflict line.
+        conflicts=$(echo "$stow_output" | awk '/\* (neither a link nor a directory|a directory but source is a file|a file but source is a directory)/ {print $NF}')
+
+        if [ -n "$conflicts" ]; then
+            for conflict_path in $conflicts; do
+                full_path="$TARGET_DIR/$conflict_path"
+                
+                if [ -e "$full_path" ] || [ -L "$full_path" ]; then
+                    echo "Moving conflicting item: $full_path to backup location."
+                    # Ensure backup directory structure exists
+                    mkdir -p "$(dirname "$BACKUP_DIR/$conflict_path")"
+                    # Move the item
+                    mv "$full_path" "$BACKUP_DIR/$conflict_path"
+                else
+                    echo "Warning: Conflict reported for '$full_path', but item not found. Skipping move."
                 fi
-            fi
-
-            if [ "$is_managed" = false ]; then
-                # This item is a conflict that needs backing up/removal
-                conflicting_targets="$conflicting_targets $source_rel_path"
-            fi
+            done
+        else
+            # This handles cases where stow exits with an error but the awk filter misses the specific output message
+            echo "Stow dry run failed for $package_name in an unexpected way."
+            echo "Stow output: $stow_output"
+            # We can prompt the user or exit here if we can't safely resolve
+            # For now, we continue and hope the final stow resolves it.
         fi
-
-    done < <(find "$package_name" -printf "%P\n" | grep -v "^$" | grep -v "^\.")
-
-    # Process conflicts if any were found
-    if [ -n "$conflicting_targets" ]; then
-        echo "Found actual conflicts for $package_name. Backing up and resolving..."
-        
-        for conflict_path in $conflicting_targets; do
-            full_path="$TARGET_DIR/$conflict_path"
-            
-            # Ensure the backup directory structure is ready
-            mkdir -p "$(dirname "$BACKUP_DIR/$conflict_path")"
-            
-            # Move the conflicting file/directory to the backup location
-            if [ -e "$full_path" ] || [ -L "$full_path" ]; then
-                mv "$full_path" "$BACKUP_DIR/$conflict_path"
-                echo "Moved existing '$full_path' to '$BACKUP_DIR/$conflict_path'"
-            fi
-        done
     else
-        echo "No unmanaged conflicts found for $package_name."
+        echo "No conflicts found for $package_name during dry run."
     fi
-    echo "Stowing $package_name..."
-    stow -R --no-folding -t "$TARGET_DIR" $package
+    stow -v -R -t "$TARGET_DIR" $package --no-folding
 done
 
 echo "Backup and stow process finished successfully."
@@ -189,4 +176,4 @@ echo "Backup and stow process finished successfully."
 echo "==> Creating systemd user services..."
 systemctl --user add-wants niri.service hypridle.service
 
-echo "==> 
+echo "==> Done! 🎉"
