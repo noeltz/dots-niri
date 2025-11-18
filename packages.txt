@@ -21,13 +21,13 @@ gnome-disk-utility
 gvfs
 hypridle
 hyprlock
-hyprpaper
 hyprpicker
 hyprshot
 impala
 imv
 iwd
 kitty
+kvantum
 libnotify
 ly
 mako
@@ -50,6 +50,7 @@ rofi
 satty
 snapper
 superfile
+swww
 termscp
 ttf-cascadia-mono-nerd
 ttf-jetbrains-mono-nerd

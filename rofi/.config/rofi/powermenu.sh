@@ -22,7 +22,7 @@ OPTION=$(echo -en "$LOCK\n$LOGOUT\n$REBOOT\n$SHUTDOWN" | launch_rofi)
 
 case ${OPTION} in
     $LOCK) sleep 0.3; hyprlock;;
-    $LOGOUT) niri msg action quit;;
+    $LOGOUT) niri msg action quit --skip-confirmation;;
     $SUSPEND) systemctl suspend;;
     $REBOOT) systemctl reboot;;
     $SHUTDOWN) systemctl poweroff;;
