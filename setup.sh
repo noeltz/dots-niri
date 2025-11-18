@@ -54,13 +54,12 @@ if [[ -f "$PKG_FILE" ]]; then
     echo -e "\n📦 Installing packages from 'packages.txt'..."
     while IFS= read -r pkg; do
         [[ -z "$pkg" || "$pkg" == \#* ]] && continue
-        sudo pacman -S --needed --noconfirm "$pkg"
-        #if ! pacman -Q "$pkg" &>/dev/null; then
-        #    echo "  ➜ Installing $pkg..."
-        #    sudo pacman -S --needed --noconfirm "$pkg"
-        #else
-        #    echo "  ✓ $pkg already installed"
-        #fi
+        if ! pacman -Q "$pkg" &>/dev/null; then
+            echo "  ➜ Installing $pkg..."
+            sudo pacman -S --needed --noconfirm "$pkg"
+        else
+            echo "  ✓ $pkg already installed"
+        fi
     done < "$PKG_FILE"
 else
     echo "⚠️  No 'packages.txt' found, skipped."
@@ -134,7 +133,7 @@ cd "$DOTFILES_DIR"
 # Iterate through each package directory (e.g., paru, bat)
 for package_dir in */; do
     package_name=$(basename "$package_dir")
-    echo "Analyzing conflicts for package: $package_name"
+    echo "Stow: $package_name"
 
     # Navigate into the specific package directory to correctly calculate paths
     cd "$DOTFILES_DIR/$package_name"
@@ -178,10 +177,8 @@ for package_dir in */; do
 
     # Navigate back to the root of the repo for the next iteration
     cd "$DOTFILES_DIR"
-    echo "Finished conflict analysis for $package_name and start stowing..."
     stow -R -t "$TARGET_DIR" $package_name --no-folding
 done
-
 echo "Backup and stow process finished successfully."
 
 echo "==> Creating systemd user services..."
