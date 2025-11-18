@@ -132,38 +132,39 @@ cd "$DOTFILES_DIR"
 # --- Conflict Resolution Loop ---
 for package in */; do
     package_name=$(basename "$package")
+    echo "Analyzing conflicts for package: $package_name"
 
-    # Run stow dry-run and capture *all* output and exit status
+    # Run stow dry-run and capture *all* output
     # Use '|| true' to prevent script exit if stow reports an error (which it does on conflict)
-    stow_output=$(stow -t "$TARGET_DIR" --no -v --no-folding "$package_name" 2>&1 || true)
-    stow_exit_status=$?
-
-    if [ "$stow_exit_status" -ne 0 ]; then
+    stow_output=$(stow -t "$TARGET_DIR" --no -v --no-folding"$package_name" 2>&1 || true)
+    
+    # Check if the "WARNING! stowing X would cause conflicts" message appeared
+    if echo "$stow_output" | grep -q "WARNING! stowing"; then
         echo "Conflicts detected by stow for package: $package_name. Resolving..."
         
-        # Parse the output for conflicting paths. We look for the path at the end of the conflict line.
-        conflicts=$(echo "$stow_output" | awk '/\* (neither a link nor a directory|a directory but source is a file|a file but source is a directory)/ {print $NF}')
+        # We need to extract the exact paths reported as conflicts. 
+        # The awk command below extracts the *last field* of any line starting with '*'
+        conflicts=$(echo "$stow_output" | awk -F'[* ]+' '/^\*/ {print $NF}')
 
         if [ -n "$conflicts" ]; then
             for conflict_path in $conflicts; do
-                full_path="$TARGET_DIR/$conflict_path"
+                # Make sure we remove the package name from the path if awk included it
+                # conflict_path might be 'paru/.config/paru/paru.conf' but we need '.config/paru/paru.conf' for the backup structure
+                relative_conflict_path=$(echo "$conflict_path" | sed "s|^$package_name/||")
+                full_path="$TARGET_DIR/$relative_conflict_path"
                 
                 if [ -e "$full_path" ] || [ -L "$full_path" ]; then
                     echo "Moving conflicting item: $full_path to backup location."
                     # Ensure backup directory structure exists
-                    mkdir -p "$(dirname "$BACKUP_DIR/$conflict_path")"
+                    mkdir -p "$(dirname "$BACKUP_DIR/$relative_conflict_path")"
                     # Move the item
-                    mv "$full_path" "$BACKUP_DIR/$conflict_path"
+                    mv "$full_path" "$BACKUP_DIR/$relative_conflict_path"
                 else
                     echo "Warning: Conflict reported for '$full_path', but item not found. Skipping move."
                 fi
             done
         else
-            # This handles cases where stow exits with an error but the awk filter misses the specific output message
-            echo "Stow dry run failed for $package_name in an unexpected way."
-            echo "Stow output: $stow_output"
-            # We can prompt the user or exit here if we can't safely resolve
-            # For now, we continue and hope the final stow resolves it.
+            echo "Failed to parse specific conflict paths from stow output, but conflicts were indicated."
         fi
     else
         echo "No conflicts found for $package_name during dry run."
