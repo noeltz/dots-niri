@@ -140,27 +140,20 @@ for package_dir in */; do
     package_name=$(basename "$package_dir")
     echo "Analyzing conflicts for package: $package_name"
 
-    # Use rsync dry-run to identify files that already exist in $TARGET_DIR
-    # -a: archive mode (preserves permissions, recursive)
-    # -n: dry run (no changes)
-    # --delete-after: important for correct conflict listing behavior
-    # We target the contents *inside* the package for rsync comparison
+    # Run rsync dry-run, capture output, and ignore its exit status using || true
+    rsync_output=$(rsync -an --delete-after "$package_name/" "$TARGET_DIR/" 2>&1 || true)
     
-    # Run rsync dry run, capturing the list of existing files it encounters
-    # We pipe the output into a variable, filtering for lines starting with >
-    conflicts_output=$(rsync -an --delete-after "$package_name/" "$TARGET_DIR/" | grep '^\>')
+    # Filter the output for lines starting with '>' which indicate files to be transferred/conflicts
+    conflicts_output=$(echo "$rsync_output" | grep '^\>')
 
     if [ -n "$conflicts_output" ]; then
         echo "Found unmanaged conflicts for $package_name. Backing up and resolving..."
 
-        # Extract the paths from the rsync output (which gives relative paths starting after the >)
-        # We process these lines one by one to get the exact file path
         while IFS= read -r line; do
             # Extract the relative path (remove the '> .rwxr... ') part of the line
             conflict_rel_path=$(echo "$line" | awk '{print $2}')
             full_path="$TARGET_DIR/$conflict_rel_path"
 
-            # Check again that the path isn't a pre-existing symlink pointing to *this* repo
             is_managed=false
             if [ -L "$full_path" ]; then
                 actual_source=$(readlink -f "$full_path")
