@@ -157,14 +157,14 @@ for package in */; do
             if [ -e "$full_path" ]; then
                 mv "$full_path" "$BACKUP_DIR/$conflict_path"
                 echo "Moved existing '$full_path' to '$BACKUP_DIR/$conflict_path'"
-                stow -R -t "$TARGET_DIR" $package --no-folding
+                stow -v -R -t "$TARGET_DIR" $package --no-folding
             else
                 echo "Warning: Conflict reported for '$full_path', but it doesn't exist. Skipping backup."
             fi
         done
     else
         echo "No conflicts found for $package during dry run."
-        stow -R -t "$TARGET_DIR" $package --no-folding
+        stow -v -R -t "$TARGET_DIR" $package --no-folding
     fi
 done
 
