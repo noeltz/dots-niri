@@ -130,46 +130,68 @@ echo "Created backup directory: $BACKUP_DIR"
 cd "$DOTFILES_DIR"
 
 # --- Conflict Resolution Loop ---
-for package in */; do
-    package_name=$(basename "$package")
+# Loop through each package (directory) in the dotfiles repo (e.g., bat, nvim, paru)
+for package_dir in */; do
+    package_name=$(basename "$package_dir")
     echo "Analyzing conflicts for package: $package_name"
 
-    # Run stow dry-run and capture *all* output
-    # Use '|| true' to prevent script exit if stow reports an error (which it does on conflict)
-    stow_output=$(stow -t "$TARGET_DIR" --no -v --no-folding"$package_name" 2>&1 || true)
+    conflicting_targets=()
     
-    # Check if the "WARNING! stowing X would cause conflicts" message appeared
-    if echo "$stow_output" | grep -q "WARNING! stowing"; then
-        echo "Conflicts detected by stow for package: $package_name. Resolving..."
+    # Use find to iterate over every file/directory within the package
+    # -printf "%P\n" gives the path relative to the package dir (e.g., .config/paru/paru.conf)
+    while IFS= read -r source_rel_path; do
         
-        # We need to extract the exact paths reported as conflicts. 
-        # The awk command below extracts the *last field* of any line starting with '*'
-        conflicts=$(echo "$stow_output" | awk -F'[* ]+' '/^\*/ {print $NF}')
-
-        if [ -n "$conflicts" ]; then
-            for conflict_path in $conflicts; do
-                # Make sure we remove the package name from the path if awk included it
-                # conflict_path might be 'paru/.config/paru/paru.conf' but we need '.config/paru/paru.conf' for the backup structure
-                relative_conflict_path=$(echo "$conflict_path" | sed "s|^$package_name/||")
-                full_path="$TARGET_DIR/$relative_conflict_path"
-                
-                if [ -e "$full_path" ] || [ -L "$full_path" ]; then
-                    echo "Moving conflicting item: $full_path to backup location."
-                    # Ensure backup directory structure exists
-                    mkdir -p "$(dirname "$BACKUP_DIR/$relative_conflict_path")"
-                    # Move the item
-                    mv "$full_path" "$BACKUP_DIR/$relative_conflict_path"
-                else
-                    echo "Warning: Conflict reported for '$full_path', but item not found. Skipping move."
-                fi
-            done
-        else
-            echo "Failed to parse specific conflict paths from stow output, but conflicts were indicated."
+        # Skip empty lines or dot-files in root of package that stow ignores by default (e.g. .git)
+        if [[ -z "$source_rel_path" ]] || [[ "$source_rel_path" == .* ]]; then
+            continue
         fi
+
+        target_path="$TARGET_DIR/$source_rel_path"
+        
+        # Check if something exists at the target path that would block stow
+        if [ -e "$target_path" ] || [ -L "$target_path" ]; then
+            
+            is_managed=false
+            if [ -L "$target_path" ]; then
+                # Check if the existing item is a symlink pointing into our current repo
+                actual_source=$(readlink -f "$target_path")
+                if [[ "$actual_source" == "$DOTFILES_DIR"* ]]; then
+                    is_managed=true
+                fi
+            fi
+
+            if [ "$is_managed" = false ]; then
+                # If it's not a symlink we manage, it's a conflict
+                conflicting_targets+=("$source_rel_path")
+            fi
+        fi
+
+    done < <(find "$package_name" -not -path "$package_name" -printf "%P\n")
+
+    # Process conflicts for this specific package
+    if [ ${#conflicting_targets[@]} -gt 0 ]; then
+        echo "Found unmanaged conflicts for $package_name. Backing up and resolving..."
+        
+        for conflict_path in "${conflicting_targets[@]}"; do
+            full_path="$TARGET_DIR/$conflict_path"
+            
+            if [ -e "$full_path" ] || [ -L "$full_path" ]; then
+                echo "Moving conflicting item: $full_path to backup location."
+                # Ensure backup directory structure exists
+                mkdir -p "$(dirname "$BACKUP_DIR/$conflict_path")"
+                # Move the item
+                mv "$full_path" "$BACKUP_DIR/$conflict_path"
+            fi
+        done
     else
-        echo "No conflicts found for $package_name during dry run."
+        echo "No unmanaged conflicts found for $package_name."
     fi
-    stow -v -R -t "$TARGET_DIR" $package --no-folding
+done
+
+for package_dir in */; do
+    package_name=$(basename "$package_dir")
+    echo "Stowing package: $package_name"
+    stow -R -t "$TARGET_DIR" $package_name --no-folding
 done
 
 echo "Backup and stow process finished successfully."
