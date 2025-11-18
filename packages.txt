@@ -1,6 +1,7 @@
 xdg-desktop-portal-gnome
 xdg-desktop-portal-gtk
 7zip
+adw-gtk-theme
 base
 bat
 bluetui
