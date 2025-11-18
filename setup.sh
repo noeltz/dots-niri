@@ -144,7 +144,7 @@ for package in */; do
     stow_output=$(stow -t "$TARGET_DIR" --no-folding --no -v "$package" 2>&1 || true)
     
     # Check if the output contains conflict messages
-    conflicts=$(echo "$stow_output" | awk '/\* existing target is neither a link nor a directory/ {print $NF}')
+    conflicts=$(echo "$stow_output" | awk '/\* since neither a link nor a directory/ {print $NF}')
 
     if [ -n "$conflicts" ]; then
         echo "Found conflicts for $package. Backing up and resolving..."
