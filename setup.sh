@@ -54,12 +54,13 @@ if [[ -f "$PKG_FILE" ]]; then
     echo -e "\n📦 Installing packages from 'packages.txt'..."
     while IFS= read -r pkg; do
         [[ -z "$pkg" || "$pkg" == \#* ]] && continue
-        if ! pacman -Q "$pkg" &>/dev/null; then
-            echo "  ➜ Installing $pkg..."
-            sudo pacman -S --needed --noconfirm "$pkg"
-        else
-            echo "  ✓ $pkg already installed"
-        fi
+        sudo pacman -S --needed --noconfirm "$pkg"
+        #if ! pacman -Q "$pkg" &>/dev/null; then
+        #    echo "  ➜ Installing $pkg..."
+        #    sudo pacman -S --needed --noconfirm "$pkg"
+        #else
+        #    echo "  ✓ $pkg already installed"
+        #fi
     done < "$PKG_FILE"
 else
     echo "⚠️  No 'packages.txt' found, skipped."
@@ -116,12 +117,6 @@ fi
 if ! command -v stow >/dev/null 2>&1; then
     echo "==> stow not found, installing..."
     sudo pacman -S --needed --noconfirm stow
-fi
-
-# --- Check rsync ---
-if ! command -v rsync >/dev/null 2>&1; then
-    echo "==> rsync not found, installing..."
-    sudo pacman -S --needed --noconfirm rsync
 fi
 
 echo "==> Backup existing dotfiles and create symlinks with stow..."
@@ -183,13 +178,7 @@ for package_dir in */; do
 
     # Navigate back to the root of the repo for the next iteration
     cd "$DOTFILES_DIR"
-    echo "Finished conflict analysis for $package_name."
-done
-
-
-for package_dir in */; do
-    package_name=$(basename "$package_dir")
-    echo "Stowing package: $package_name"
+    echo "Finished conflict analysis for $package_name and start stowing..."
     stow -R -t "$TARGET_DIR" $package_name --no-folding
 done
 
