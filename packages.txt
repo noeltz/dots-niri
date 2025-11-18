@@ -1,3 +1,5 @@
+xdg-desktop-portal-gnome
+xdg-desktop-portal-gtk
 7zip
 base
 bat
@@ -15,6 +17,7 @@ fuzzel
 fzf
 git
 github-cli
+gnome-disk-utility
 gvfs
 hypridle
 hyprlock
@@ -22,6 +25,7 @@ hyprpaper
 hyprpicker
 hyprshot
 impala
+imv
 iwd
 kitty
 libnotify
@@ -43,13 +47,10 @@ poppler
 resvg
 ripgrep
 rofi
-rustup
 satty
 snapper
 superfile
 termscp
-thunar
-thunar-archive-plugin
 ttf-cascadia-mono-nerd
 ttf-jetbrains-mono-nerd
 ttf-roboto-mono-nerd
