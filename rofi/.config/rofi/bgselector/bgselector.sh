@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-WALL_DIR="$HOME/Pictures/Wallpapers"
+WALL_DIR="$HOME/.local/share/wallpaper"
 CACHE_DIR="$HOME/.cache/thumbnails/bgselector"
 CACHE_INDEX="$CACHE_DIR/.index"
 

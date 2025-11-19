@@ -11,8 +11,8 @@
 
 /*---WAYBAR---*/
 #waybar {
-	background: @gray950;
-	border: 1.5px solid @gray300;
+	background: @background;
+	border: 1.5px solid @foreground;
 }
 
 /*---WORKSPACES---*/
@@ -21,13 +21,13 @@
 }
 #workspaces button {
   	background: transparent;
-  	color: @gray300;
+  	color: @color0;
   	border: none;
   	padding: 0 0.4rem;
 }
 #workspaces label               { font-size: 14px;  }
-#workspaces button.active       { color: @gray200;   }
-#workspaces button.empty        { color: @gray500; }
+#workspaces button.active       { color: @color1;   }
+#workspaces button.empty        { color: @color2; }
 #workspaces button:hover {
   	box-shadow: inherit;
   	text-shadow: inherit;
@@ -56,57 +56,57 @@
 #custom-logo {
  	padding: 0 1rem;
 	font-size: 16px;
-	color: @gray200;
+	color: @color3;
 }
 
 /*---USER(UPTIME)---*/
 #user {
- 	color: @gray200;
+ 	color: @foreground;
 }
 
 /*---RAM---*/
 #memory {
- 	color: @gray300;
+ 	color: @color4;
 }
 
 /*---CPU---*/
 #cpu {
- 	color: @gray400;
+ 	color: @color5;
 }
 
 /*---IDLE---*/
 #idle_inhibitor {
- 	color: @gray400;
+ 	color: @color6;
 }
 
 /*---MUSIC---*/
 #custom-music {
- 	color: @gray200;
+ 	color: @color7;
 }
 
 /*---KEYBOARD-LANG---*/
 #language {
- 	color: @gray300;
+ 	color: @color8;
 }
 
 /*---VOLUME---*/
 #wireplumber {
- 	color: @gray300;
+ 	color: @color9;
 }
 
 /*---NETWORK---*/
 #network {
- 	color: @gray200;
+ 	color: @color10;
 }
 
 /*---BLUETOOTH---*/
 #bluetooth {
- 	color: @gray200;
+ 	color: @color11;
 }
 
 /*---BACKLIGHT---*/
 #backlight {
- 	color: @gray100;
+ 	color: @color12;
 }
 
 /*---BATTERY---*/
@@ -125,10 +125,10 @@
 
 /*---CLOCK&DATE---*/
 #clock.time {
- 	color: @gray300;
+ 	color: @foreground;
 }
 #clock.date {
- 	color: @gray200;
+ 	color: @color14;
 }
 
 #custom-separator {
@@ -137,5 +137,5 @@
 
 /*---NIRI-WINDOW---*/
 #window {
- 	color: @gray300;
+ 	color: @color13;
 }
