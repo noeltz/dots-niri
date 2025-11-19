@@ -19,6 +19,7 @@ fzf
 git
 github-cli
 gnome-disk-utility
+gnome-keyring
 gvfs
 hypridle
 hyprlock
