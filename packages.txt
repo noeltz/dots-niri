@@ -33,7 +33,6 @@ git
 github-cli
 gnome-disk-utility
 gnome-keyring
-gtk-engine-murrine
 gvfs
 hypridle
 hyprlock
