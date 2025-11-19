@@ -47,9 +47,9 @@ install_chaotic_aur() {
 
     # 3. Append the repository entry to pacman.conf
     echo "Adding the repository entry to $PACMAN_CONF..."
-    sudo echo "" >> "$PACMAN_CONF"
-    sudo echo "[$REPO_NAME]" >> "$PACMAN_CONF"
-    sudo echo "Include = /etc/pacman.d/chaotic-mirrorlist" >> "$PACMAN_CONF"
+    sudo bash -c "echo '' >> '$PACMAN_CONF'"
+    sudo bash -c "echo '[$REPO_NAME]' >> '$PACMAN_CONF'"
+    sudo bash -c "echo 'Include = /etc/pacman.d/chaotic-mirrorlist' >> '$PACMAN_CONF'"
 
     # 4. Update the system and sync package databases
     echo "Syncing package databases and updating the system..."
