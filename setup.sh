@@ -27,8 +27,6 @@ if ! command -v pacman &> /dev/null; then
 fi
 
 echo "==> Add chaotic AUR repo..."
-#!/bin/bash
-
 # Define the configuration file path and the repository name
 PACMAN_CONF="/etc/pacman.conf"
 REPO_NAME="chaotic-aur"
@@ -38,30 +36,24 @@ KEY_ID="3056513887B78AEB" # The primary key ID for Chaotic-AUR
 install_chaotic_aur() {
     echo "Attempting to install the [$REPO_NAME] repository..."
 
-    # Check for root privileges
-    if [ "$EUID" -ne 0 ]; then
-        echo "Please run this script with sudo or as root to install the repository."
-        exit 1
-    fi
-
     # 1. Install the primary key
     echo "Importing the primary key..."
-    pacman-key --recv-key $KEY_ID --keyserver keyserver.ubuntu.com
-    pacman-key --lsign-key $KEY_ID
+    sudo pacman-key --recv-key $KEY_ID --keyserver keyserver.ubuntu.com
+    sudo pacman-key --lsign-key $KEY_ID
 
     # 2. Install the chaotic-keyring and chaotic-mirrorlist packages
     echo "Installing chaotic-keyring and chaotic-mirrorlist packages..."
-    pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst' --noconfirm
+    sudo pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst' --noconfirm
 
     # 3. Append the repository entry to pacman.conf
     echo "Adding the repository entry to $PACMAN_CONF..."
-    echo "" >> "$PACMAN_CONF"
-    echo "[$REPO_NAME]" >> "$PACMAN_CONF"
-    echo "Include = /etc/pacman.d/chaotic-mirrorlist" >> "$PACMAN_CONF"
+    sudo echo "" >> "$PACMAN_CONF"
+    sudo echo "[$REPO_NAME]" >> "$PACMAN_CONF"
+    sudo echo "Include = /etc/pacman.d/chaotic-mirrorlist" >> "$PACMAN_CONF"
 
     # 4. Update the system and sync package databases
     echo "Syncing package databases and updating the system..."
-    pacman -Syu --noconfirm
+    sudo pacman -Syu --noconfirm
 
     echo "The [$REPO_NAME] repository has been successfully installed and enabled."
 }
@@ -81,10 +73,7 @@ elif grep -E "^#\[$REPO_NAME\]" "$PACMAN_CONF" > /dev/null; then
     fi
 else
     echo "The [$REPO_NAME] repository is not found in $PACMAN_CONF."
-    read -p "Do you want to install it now? (y/N): " choice
-    if [[ "$choice" =~ ^[Yy]$ ]]; then
-        install_chaotic_aur
-    fi
+    install_chaotic_aur
 fi
 
 echo "==> Make sure git is installed..."
