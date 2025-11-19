@@ -73,6 +73,7 @@ ttf-jetbrains-mono-nerd
 ttf-roboto-mono-nerd
 udiskie
 unzip
+wallust-git
 waybar
 wget
 wireplumber
