@@ -712,7 +712,7 @@ main() {
     set_gtk_theme "$gtk_theme"
     set_icon_theme "$icon_theme"
     run_wallust_theme "$wallust_theme" "$wallpaper_path"
-    update_niri_config
+    # update_niri_config
     update_vscode_theme
     makoctl reload 2> /dev/null || log_warn "Failed to reload mako"
     save_theme_state "$detected_theme" "$wallpaper_variation"
