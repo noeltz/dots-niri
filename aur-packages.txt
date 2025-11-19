@@ -1,14 +1,4 @@
-colloid-catppuccin-gtk-theme-git
-colloid-catppuccin-theme-git
-colloid-cursors-git
-colloid-gtk-theme-git
-colloid-icon-theme
-colloid-dracula-gtk-theme-git
-colloid-dracula-theme-git
-colloid-everforest-gtk-theme-git
-colloid-everforest-theme-git
-colloid-gruvbox-gtk-theme-git
-colloid-gruvbox-theme-git
-colloid-nord-gtk-theme-git
-colloid-nord-icon-theme-git
 google-chrome
+rose-pine-gtk-theme
+solarized-dark-themes
+wallust
