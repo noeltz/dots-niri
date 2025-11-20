@@ -492,7 +492,7 @@ manage_symlinks() {
     [[ -e "$target" ]] || continue
 
     mkdir -p "$(dirname "$link")"
-    ln -sf "$target" "$link" && log_info "Created symlink: ${link##*/}"
+    ln -sfn "$target" "$link" && log_info "Created symlink: ${link##*/}"
   done
 }
 
