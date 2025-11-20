@@ -65,6 +65,7 @@ ripgrep
 rofi
 satty
 snapper
+starship
 superfile
 swww
 termscp

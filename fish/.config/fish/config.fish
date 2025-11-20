@@ -94,3 +94,6 @@ alias drun='docker run'
 
 # Git aliases TODO
 alias lzg='lazygit'
+
+# init starship
+starship init fish | source
