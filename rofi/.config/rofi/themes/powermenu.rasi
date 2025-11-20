@@ -8,7 +8,7 @@ USE_BUTTONS=YES
 */
 
 * {
-	accent: @color1;	
+	accent: @selected;	
 }
 
 window {
@@ -18,7 +18,7 @@ window {
     padding:                     15px 20px;
     border:                      2px solid;
     border-color:		 		 @accent;    
-    background-color:            @base;
+    background-color:            @background;
     children: 			 		 [ "message", "listview" ];
 }
 
@@ -53,7 +53,7 @@ element {
 element selected.normal {
 	border: 					 1px solid;
     background-color:            @accent;
-    text-color:                  @black;
+    text-color:                  @background-alt;
 }
 element-text {
     font:                    	 "GeistMono NF 25";
