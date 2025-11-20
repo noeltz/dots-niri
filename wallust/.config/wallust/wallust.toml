@@ -60,7 +60,7 @@ vscode2 = { src = 'vscode', dst = '~/.cache/wallust/colors' }
 
 neopywal = { src = 'neopywal.vim', dst = '~/.cache/wallust/colors_neopywal.vim' }
 
-rofi = { src = 'rofi.rasi', dst = '~/.config/rofi/colors/wallust.rasi' }
+rofi = { src = 'rofi.rasi', dst = '~/.config/rofi/themes/wallust.rasi' }
 
 mako = { src = 'mako', dst = '~/.config/mako/config' }
 

@@ -1,14 +1,15 @@
 configuration {
     modes:                      [drun];
     show-icons:                 true;
-    icon-theme: 				"Papirus-Dark";
+    icon-theme: 				"Colloid-Dark";
     display-drun:               "  ";
 }
-@import "tui"
+@import "wallust"
 
 * {
-	accent: @white;
-	bg: @base;
+    font: "JetBrainsMono Nerd Font";
+	accent: @foreground;
+	bg: @background;
 	background-color: @bg;
 }
 
@@ -65,7 +66,7 @@ element normal.normal {
 }
 element selected.normal {
     background-color:            @accent;
-    text-color:                  @black;
+    text-color:                  @background-alt;
     border:                      1px solid;
 }
 element-icon {
