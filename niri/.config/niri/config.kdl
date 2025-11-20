@@ -63,6 +63,7 @@ binds {
     MOD+SPACE                           hotkey-overlay-title="Open App Launcher: rofi" { spawn-sh ".config/rofi/launcher.sh"; }
     MOD+B                               hotkey-overlay-title="Open Browser: chrome" { spawn-sh "google-chrome-stable"; }
     MOD+L                               hotkey-overlay-title="Lock Screen: hyprlock" { spawn-sh "hyprlock"; }
+    MOD+SHIFT+T                         hotkey-overlay-title="Open Theme Switcher" { spawn-sh ".config/rofi/bgselector/bgselector.sh"; }
     
     // Please choose your own file manager
     MOD+E                             hotkey-overlay-title="File Manager: Thunar" { spawn-sh "thunar"; }
