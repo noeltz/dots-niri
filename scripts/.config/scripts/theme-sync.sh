@@ -112,9 +112,9 @@ map_to_gtk_theme() {
       ;;
     "rose-pine")
       if [[ "$variation" == "light" ]]; then
-        echo "Rosepine-Light"
+        echo "rose-pine-dawn-gtk"
       else
-        echo "Rosepine-Dark"
+        echo "rose-pine-gtk"
       fi
       ;;
     "tokyo-night")
@@ -714,8 +714,8 @@ main() {
     run_wallust_theme "$wallust_theme" "$wallpaper_path"
     # update_niri_config
     update_vscode_theme
-    makoctl reload 2> /dev/null || log_warn "Failed to reload mako"
     pkill -SIGUSR2 waybar 2>  /dev/null || log_warn "Failed to reload waybar"
+    makoctl reload 2> /dev/null || log_warn "Failed to reload mako"
     save_theme_state "$detected_theme" "$wallpaper_variation"
 
     log_success "Dynamic theme synchronization completed successfully"

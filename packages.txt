@@ -68,6 +68,7 @@ snapper
 superfile
 swww
 termscp
+tokyonight-gtk-theme-git
 ttf-cascadia-mono-nerd
 ttf-jetbrains-mono-nerd
 ttf-roboto-mono-nerd
