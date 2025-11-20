@@ -1,14 +1,14 @@
 configuration {
     show-icons:                 false;
 }
-@import "tui" 
+@import "wallust" 
 
 /*
 USE_BUTTONS=YES
 */
 
 * {
-	accent: @white;	
+	accent: @color1;	
 }
 
 window {
@@ -46,8 +46,8 @@ listview {
 element {
     padding:					 10px;
     border-color:                @accent;
-    background-color:            @base;
-    text-color:                  white;
+    background-color:            @background;
+    text-color:                  @foreground;
     cursor:                      pointer;
 }
 element selected.normal {
