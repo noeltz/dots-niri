@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # --- Configuration ---
 INIT_SCRIPT="$HOME/.config/scripts/theme-sync.sh"
@@ -19,11 +18,8 @@ if ! [ -f $HOME/.cache/theme-sync-state ]; then
     count=0
     while [[ $count -lt $MAX_RETRIES ]]; do
         if [[ -f "$FILE_TO_CHECK" ]]; then
-            bash -c "waybar &"
             exit 0
         fi
-
-        # File does not exist yet: Wait 1 second
         sleep 1
         ((count++))
     done
