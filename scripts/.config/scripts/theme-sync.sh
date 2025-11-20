@@ -380,7 +380,7 @@ set_ini_value() {
       sed -i "/^\\[$section\\]/a $key=$value" "$file"
     fi
   else
-    printf '\\n[%s]\\n%s=%s\\n' "$section" "$key" "$value" >> "$file"
+    printf '\n[%s]\n%s=%s\n' "$section" "$key" "$value" >> "$file"
   fi
 }
 
