@@ -68,6 +68,8 @@ snapper
 superfile
 swww
 termscp
+thunar
+thunar-archive-plugin
 tokyonight-gtk-theme-git
 ttf-cascadia-mono-nerd
 ttf-jetbrains-mono-nerd

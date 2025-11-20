@@ -65,7 +65,7 @@ binds {
     MOD+L                               hotkey-overlay-title="Lock Screen: hyprlock" { spawn-sh "hyprlock"; }
     
     // Please choose your own file manager
-    MOD+E                             hotkey-overlay-title="File Manager: Nautilus" { spawn-sh "nautilus"; }
+    MOD+E                             hotkey-overlay-title="File Manager: Thunar" { spawn-sh "thunar"; }
     MOD+SHIFT+E                       hotkey-overlay-title="File Manager: yazi" { spawn-sh "kitty --class yazi -e yazi"; }
 
     // ─── Extras ───
