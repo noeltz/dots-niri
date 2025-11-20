@@ -715,6 +715,7 @@ main() {
     # update_niri_config
     update_vscode_theme
     pkill -SIGUSR2 waybar 2>  /dev/null || log_warn "Failed to reload waybar"
+    sleep 0.8
     makoctl reload 2> /dev/null || log_warn "Failed to reload mako"
     save_theme_state "$detected_theme" "$wallpaper_variation"
 
