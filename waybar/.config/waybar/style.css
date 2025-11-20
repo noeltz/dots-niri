@@ -21,7 +21,7 @@
 }
 #workspaces button {
   	background: transparent;
-  	color: @grey200;
+  	color: @color8;
   	border: none;
   	padding: 0 0.4rem;
 }
