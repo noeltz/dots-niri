@@ -12,14 +12,14 @@ if ! [ -f $HOME/.cache/theme-sync-state ]; then
     swww img $HOME/.local/share/wallpaper/Material/Dark/default.jpg
     sleep 1
     if [[ -x "$INIT_SCRIPT" ]]; then
-        "$INIT_SCRIPT"
+        bash -c "$INIT_SCRIPT"
     else
         echo "Warning: $INIT_SCRIPT not found or not executable."
     fi
     count=0
     while [[ $count -lt $MAX_RETRIES ]]; do
         if [[ -f "$FILE_TO_CHECK" ]]; then
-            waybar &
+            bash -c "waybar &"
             exit 0
         fi
 
