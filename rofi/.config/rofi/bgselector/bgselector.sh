@@ -90,7 +90,7 @@ wallpaper_path="${wall_dir}/${wall_selection}"
 # Set wallpaper
 swww img "$wallpaper_path" -t fade --transition-duration 1 --transition-fps 60 &
 sleep 0.2
-"$HOME/.config/scripts/theme-sync.sh" &
+bash -c "$HOME/.config/scripts/theme-sync.sh &"
 wait
 
 
