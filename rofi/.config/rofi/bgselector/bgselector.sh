@@ -8,7 +8,7 @@ cacheDir="$HOME/.cache/thumbnails/bgselector"
 [ -d "$cacheDir" ] || mkdir -p "$cacheDir"
 
 # Rofi command
-rofi_command="rofi -i -show -dmenu -config "$HOME/.config/rofi/bgselector/style.rasi"
+rofi_command="rofi -i -show -dmenu -config $HOME/.config/rofi/bgselector/style.rasi"
 
 # Detect number of cores and set a sensible number of jobs
 get_optimal_jobs() {
@@ -87,10 +87,15 @@ wall_selection=$(find "${wall_dir}" -type f \( -iname "*.jpg" -o -iname "*.jpeg"
 # Full wallpaper path
 wallpaper_path="${wall_dir}/${wall_selection}"
 
-# Set wallpaper
-swww img "${wallpaper_path}" -t fade --transition-duration 1 --transition-fps 60 &
-sleep 0.2
-"$HOME/.config/scripts/theme-sync.sh" &
-wait
+# Apply wallpaper
+if [ -n "$wall_selection" ]; then
+    selected_path="${wallpaper_path}"
+    if [ -f "$selected_path" ]; then
+        swww img "$selected_path" -t fade --transition-duration 1 --transition-fps 60 &
+        sleep 0.2
+        "$HOME/.config/scripts/theme-sync.sh" &
+        wait
+    fi
+fi
 
 
