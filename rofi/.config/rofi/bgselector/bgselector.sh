@@ -88,9 +88,9 @@ wall_selection=$(find "${wall_dir}" -type f \( -iname "*.jpg" -o -iname "*.jpeg"
 wallpaper_path="${wall_dir}/${wall_selection}"
 
 # Set wallpaper
-swww img "$wallpaper_path" -t fade --transition-duration 1 --transition-fps 60 &
+swww img "${wallpaper_path}" -t fade --transition-duration 1 --transition-fps 60 &
 sleep 0.2
-bash -c "$HOME/.config/scripts/theme-sync.sh &"
+"$HOME/.config/scripts/theme-sync.sh" &
 wait
 
 
