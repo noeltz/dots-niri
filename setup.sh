@@ -4,21 +4,6 @@ set -euo pipefail
 echo "==> Starting setup for niri dotfiles...."
 
 # --- Preflight checks ---
-echo "==> Check if os is 'Arch Linux'..."
-if [ -f /etc/os-release ]; then
-    . /etc/os-release
-    if [ "$NAME" != "Arch Linux" ] | [ "$NAME" != "CachyOS Linux" ]; then
-        echo "Error: This script is only intended for $EXPECTED_OS."
-        echo "Detected OS: $NAME"
-        exit 1
-    else
-        echo "OS check passed: $NAME detected."
-    fi
-else
-    echo "Warning: Cannot determine the OS using /etc/os-release."
-    exit 1
-fi
-
 echo "==> Check if pacman is installed..."
 if ! command -v pacman &> /dev/null; then
     echo "Error: 'pacman' is not installed or not in the PATH."
