@@ -38,9 +38,7 @@ hypridle
 hyprlock
 hyprpicker
 hyprshot
-impala
 imv
-iwd
 kitty
 kvantum
 libnotify
@@ -49,6 +47,7 @@ mako
 man-db
 mate-polkit
 mpv
+networkmanager
 niri
 npm
 ntfs-3g
