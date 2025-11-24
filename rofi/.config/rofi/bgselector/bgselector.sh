@@ -37,9 +37,9 @@ while read -r img; do
     
     (
         if [[ "$img" =~ \.(gif|GIF)$ ]]; then
-            magick "$img[0]" -strip -thumbnail 330x540^ -gravity center -extent 330x540 -quality 80 +repage "$cache_file" 2>/dev/null
+            magick "$img[0]" -strip -thumbnail 310x500^ -gravity center -extent 310x500 -quality 80 +repage "$cache_file" 2>/dev/null
         else
-            magick "$img" -strip -thumbnail 330x540^ -gravity center -extent 330x540 -quality 80 +repage "$cache_file" 2>/dev/null
+            magick "$img" -strip -thumbnail 310x500^ -gravity center -extent 310x500 -quality 80 +repage "$cache_file" 2>/dev/null
         fi
         [ -f "$cache_file" ] && echo "1" >> "$progress_file"
     ) &
