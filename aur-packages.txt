@@ -3,3 +3,4 @@ google-chrome
 gtk-engine-murrine
 rose-pine-gtk-theme
 solarized-dark-themes
+waypaper-git
