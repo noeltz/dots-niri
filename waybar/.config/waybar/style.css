@@ -1,36 +1,42 @@
 @import "./colors.css";
 
 * {
-	font-family: "JetBrainsMono Nerd Font";
-  	font-size: 13px;
-	font-weight: bold;
-  	padding: 0;
-  	margin: 0;
-  	border: none;
+    font-family: "Cascadia Mono NF";
+    font-size: 13px;
+    font-weight: bold;
+    padding: 0;
+    margin: 0;
+    border: none;
 }
 
 /*---WAYBAR---*/
 #waybar {
-	background: @background;
-	border: 1.5px solid @foreground;
+    background: @background;
+    border: 1.5px solid @foreground;
 }
 
 /*---WORKSPACES---*/
 #workspaces {
-	background: transparent;
+    background: transparent;
 }
 #workspaces button {
-  	background: transparent;
-  	color: @color8;
-  	border: none;
-  	padding: 0 0.4rem;
+    background: transparent;
+    color: @color8;
+    border: none;
+    padding: 0 0.4rem;
 }
-#workspaces label               { font-size: 14px;  }
-#workspaces button.active       { color: @color1;   }
-#workspaces button.empty        { color: @color2; }
+#workspaces label {
+    font-size: 14px;
+}
+#workspaces button.active {
+    color: @color1;
+}
+#workspaces button.empty {
+    color: @color2;
+}
 #workspaces button:hover {
-  	box-shadow: inherit;
-  	text-shadow: inherit;
+    box-shadow: inherit;
+    text-shadow: inherit;
 }
 
 /*---DEFAULT---*/
@@ -48,87 +54,87 @@
 #battery,
 #clock,
 #power {
-	background: transparent;
- 	padding: 0.5rem;
+    background: transparent;
+    padding: 0.5rem;
 }
 
 /*---LOGO---*/
 #custom-logo {
- 	padding: 0 1rem;
-	font-size: 16px;
-	color: @color3;
+    padding: 0 1rem;
+    font-size: 16px;
+    color: @color3;
 }
 
 /*---USER(UPTIME)---*/
 #user {
- 	color: @foreground;
+    color: @foreground;
 }
 
 /*---RAM---*/
 #memory {
- 	color: @color4;
+    color: @color4;
 }
 
 /*---CPU---*/
 #cpu {
- 	color: @color5;
+    color: @color5;
 }
 
 /*---IDLE---*/
 #idle_inhibitor {
- 	color: @color6;
+    color: @color6;
 }
 
 /*---MUSIC---*/
 #custom-music {
- 	color: @color7;
+    color: @color7;
 }
 
 /*---KEYBOARD-LANG---*/
 #language {
- 	color: @color8;
+    color: @color8;
 }
 
 /*---VOLUME---*/
 #wireplumber {
- 	color: @color9;
+    color: @color9;
 }
 
 /*---NETWORK---*/
 #network {
- 	color: @color10;
+    color: @color10;
 }
 
 /*---BLUETOOTH---*/
 #bluetooth {
- 	color: @color11;
+    color: @color11;
 }
 
 /*---BACKLIGHT---*/
 #backlight {
- 	color: @color12;
+    color: @color12;
 }
 
 /*---BATTERY---*/
 #battery {
- 	color: @green;
+    color: @green;
 }
 #battery.charging {
-  	color: @teal;
+    color: @teal;
 }
 #battery.warning:not(.charging) {
-  	color: @peach;
+    color: @peach;
 }
 #battery.critical:not(.charging) {
-  	color: @red;
+    color: @red;
 }
 
 /*---CLOCK&DATE---*/
 #clock.time {
- 	color: @foreground;
+    color: @foreground;
 }
 #clock.date {
- 	color: @color14;
+    color: @color14;
 }
 
 #custom-separator {
@@ -137,5 +143,5 @@
 
 /*---NIRI-WINDOW---*/
 #window {
- 	color: @color13;
+    color: @color13;
 }

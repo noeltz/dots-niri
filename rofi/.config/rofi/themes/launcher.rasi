@@ -7,7 +7,7 @@ configuration {
 @import "wallust"
 
 * {
-    font: "JetBrainsMono Nerd Font";
+    font: "Cascadia Mono NF";
 	accent: @foreground;
 	bg: @background;
 	background-color: @bg;

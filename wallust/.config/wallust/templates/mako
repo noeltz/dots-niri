@@ -12,7 +12,7 @@ on-button-right=dismiss
 on-touch=invoke-default-action
 
 # [ STYLE OPTIONS ]
-font= JetBrainsMono Nerd Font 10
+font= Cascadia Mono NF 10
 background-color={{background}}
 text-color={{foreground}}
 
