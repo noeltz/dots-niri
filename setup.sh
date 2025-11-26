@@ -222,5 +222,6 @@ echo "Backup and stow process finished successfully."
 
 echo -e "\n==> Creating systemd user services..."
 systemctl --user add-wants niri.service hypridle.service
+systemctl --user restart hypridle
 
 echo "==> Done! 🎉"
