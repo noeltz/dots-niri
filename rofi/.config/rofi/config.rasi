@@ -75,7 +75,7 @@ configuration {
 
 	/*---------- Misc setting ----------*/
 	terminal: "rofi-sensible-terminal";
-	font: "Cascadia Mono NF 14";
+	font: "GeistMono NFP 14";
 	sort: false;
 	threads: 0;
 	click-to-exit: true;

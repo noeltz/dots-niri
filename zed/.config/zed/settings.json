@@ -23,13 +23,13 @@
   "prettier": {
     "allowed": true
   },
-  "ui_font_family": "Cascadia Mono NF",
-  "buffer_font_family": "Cascadia Mono NF",
+  "ui_font_family": "GeistMono NFP",
+  "buffer_font_family": "GeistMono NFP",
   "telemetry": {
     "diagnostics": false,
     "metrics": false
   },
   "ui_font_size": 16,
   "buffer_font_size": 15,
-  "theme": "wallust"
+  "theme": "Wallust"
 }
