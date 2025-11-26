@@ -148,7 +148,8 @@ else
 fi
 
 # --- Copy default configs ---
-cp -rn $DOTFILES_DIR/setup/default_configs/.config/. $HOME/.config/
+echo "==> Installing default configuration files..."
+cp -rnv $DOTFILES_DIR/setup/default_configs/.config/. $HOME/.config/
 
 # --- Check stow ---
 if ! command -v stow >/dev/null 2>&1; then
