@@ -135,7 +135,7 @@ element.selected {
 }
 
 element-icon {
-    size: 280px 440px;                   // slightly refined proportions
+    size: 260px 400px;                   // slightly refined proportions
     horizontal-align: 0.5;
     vertical-align: 0.5;
     background-color: #000000;
