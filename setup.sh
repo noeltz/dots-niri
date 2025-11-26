@@ -140,7 +140,7 @@ fi
 
 # --- Enable ly display manager ---
 if command -v ly-dm >/dev/null 2>&1; then
-    echo "==> Enabling ly display manager..."
+    echo -e "\n==> Enabling ly display manager..."
     sudo systemctl enable ly.service
     echo "✅ ly enabled successfully!"
 else
@@ -148,7 +148,7 @@ else
 fi
 
 # --- Copy default configs ---
-echo "==> Installing default configuration files..."
+echo -e "\n==> Installing default configuration files..."
 cp -rnv $DOTFILES_DIR/setup/default_configs/.config/. $HOME/.config/
 
 # --- Check stow ---
@@ -157,7 +157,7 @@ if ! command -v stow >/dev/null 2>&1; then
     sudo pacman -S --needed --noconfirm stow
 fi
 
-echo "==> Backup existing dotfiles and create symlinks with stow..."
+echo -e "\n==> Backup existing dotfiles and create symlinks with stow..."
 echo "Dotfiles repository: $DOTFILES_DIR"
 echo "Backup directory: $BACKUP_DIR"
 
@@ -220,7 +220,7 @@ for package_dir in */; do
 done
 echo "Backup and stow process finished successfully."
 
-echo "==> Creating systemd user services..."
+echo -e "\n==> Creating systemd user services..."
 systemctl --user add-wants niri.service hypridle.service
 
 echo "==> Done! 🎉"
