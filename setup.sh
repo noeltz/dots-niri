@@ -147,6 +147,9 @@ else
     echo "⚠️ ly not found, skipped enabling display manager."
 fi
 
+# --- Copy default configs ---
+cp -rn $DOTFILES_DIR/setup/default_configs/.config/. $HOME/.config/
+
 # --- Check stow ---
 if ! command -v stow >/dev/null 2>&1; then
     echo "==> stow not found, installing..."
@@ -175,16 +178,16 @@ for package_dir in */; do
 
     # Find all files and symlinks inside this package (not directories themselves)
     find . -type f -o -type l | while IFS= read -r source_rel_path; do
-        
+
         # Remove the leading './' from the path
         source_rel_path="${source_rel_path#./}"
-        
+
         # The full path where this file would link to in $HOME
         full_target_path="$TARGET_DIR/$source_rel_path"
 
         # Check if the target path exists in $HOME (as a file, dir, or symlink)
         if [ -e "$full_target_path" ] || [ -L "$full_target_path" ]; then
-            
+
             is_managed=false
             if [ -L "$full_target_path" ]; then
                 # Check if the existing item is a symlink pointing back into our repo
@@ -197,12 +200,12 @@ for package_dir in */; do
             if [ "$is_managed" = false ]; then
                 # This item is an unmanaged conflict
                 echo "Found unmanaged conflict file: $full_target_path. Backing up and resolving..."
-                
+
                 backup_location="$BACKUP_DIR/$source_rel_path"
 
                 # Ensure the parent directory in the backup location exists
                 mkdir -p "$(dirname "$backup_location")"
-                
+
                 # Move ONLY this specific file/symlink
                 mv "$full_target_path" "$backup_location"
                 echo "Moved existing '$full_target_path' to '$backup_location'"

@@ -63,8 +63,8 @@ binds {
     MOD+SPACE                           hotkey-overlay-title="Open App Launcher: rofi" { spawn-sh ".config/rofi/launcher.sh"; }
     MOD+B                               hotkey-overlay-title="Open Browser: chrome" { spawn-sh "google-chrome-stable"; }
     MOD+L                               hotkey-overlay-title="Lock Screen: hyprlock" { spawn-sh "hyprlock"; }
-    MOD+SHIFT+T                         hotkey-overlay-title="Open Theme Switcher" { spawn-sh ".config/rofi/bgselector/bgselector.sh"; }
-    
+    MOD+SHIFT+T                         hotkey-overlay-title="Open Theme Switcher" { spawn-sh "waypaper --folder ~/.local/share/wallpaper --backend swww --fill fill --state-file ~/.cache/waypaper.state"; }
+
     // Please choose your own file manager
     MOD+E                             hotkey-overlay-title="File Manager: Thunar" { spawn-sh "thunar"; }
     MOD+SHIFT+E                       hotkey-overlay-title="File Manager: yazi" { spawn-sh "kitty --class yazi -e yazi"; }
@@ -223,7 +223,7 @@ binds {
             proportion 0.5
             proportion 0.66667
         }
-        
+
         // preset-window-heights { }
         default-column-width { proportion 1.0; }
 
@@ -234,7 +234,7 @@ binds {
             inactive-color "#505050"
         }
 
-    border { 
+    border {
     	width 1
    		active-color "#d1d1d1"
    		inactive-color "#505050"
@@ -293,7 +293,7 @@ binds {
         match app-id=r#"chrome$"# title="^Picture-in-Picture$"
         open-floating true // Always float Chrome Browser PiP windows
     }
-    
+
     window-rule {
         match app-id=r#"firefox$"# title="^Picture-in-Picture$"
         open-floating true // Always float Firefox PiP windows
@@ -312,7 +312,7 @@ binds {
 	   default-column-width { fixed 600; }
 	   default-window-height { fixed 800; }
     }
-    
+
     window-rule {
 	   match app-id="yazi"
 	   open-floating true
@@ -320,12 +320,12 @@ binds {
 	   default-column-width { fixed 1400; }
 	   default-window-height { fixed 800; }
     }
-    
+
     window-rule {
 	   match app-id="kitty"
 	   opacity 0.95
     }
-    
+
     //layer-rule {
     //    match namespace="^swww-daemon$"
     //    place-within-backdrop true
