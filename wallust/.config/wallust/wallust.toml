@@ -66,3 +66,4 @@ mako = { src = 'mako', dst = '~/.config/mako/config' }
 
 zathurarc = { src = 'zathurarc', dst = '~/.config/zathura/zathurarc' }
 
+zed = { src = 'zed.json', dst = '~/.config/zed/themes/wallust.json' }

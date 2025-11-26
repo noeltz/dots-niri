@@ -1,3 +1,4 @@
+crush-bin
 google-chrome
 gtk-engine-murrine
 rose-pine-gtk-theme

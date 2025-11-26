@@ -52,6 +52,7 @@ niri
 npm
 ntfs-3g
 nwg-look
+otf-cascadia-code
 otf-geist-mono-nerd
 papirus-icon-theme
 pipewire
@@ -71,7 +72,6 @@ termscp
 thunar
 thunar-archive-plugin
 tokyonight-gtk-theme-git
-ttf-cascadia-mono-nerd
 ttf-jetbrains-mono-nerd
 ttf-roboto-mono-nerd
 udiskie
@@ -87,4 +87,5 @@ xed
 xwayland-satellite
 yazi
 zathura
+zed
 zip
