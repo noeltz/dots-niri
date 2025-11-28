@@ -117,5 +117,5 @@ post_hook = 'killall yazi'
 
 [templates.papirus-folders]
 input_path = '~/.config/matugen/templates/papirus-folders.txt'
-output_path = '~/.config/matugen/papirus-folders/colors-papirus.txt'
+output_path = '~/.config/matugen/papirus-folders/papirus-folders.txt'
 post_hook = '~/.config/matugen/papirus-folders/change-icons.sh'
