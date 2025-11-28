@@ -49,7 +49,7 @@ output_path = '~/.config/gtk-3.0/gtk.css'
 [templates.gtk4-colors]
 input_path = '~/.config/matugen/templates/gtk-colors.css'
 output_path = '~/.config/gtk-4.0/gtk.css'
-post_hook = 'bash -c "gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3-dark && gsettings set org.gnome.desktop.interface icon-theme Numix-Circle-Light && sleep 0.1 && gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3-dark && gsettings set org.gnome.desktop.interface color-scheme prefer-dark && killall xdg-desktop-portal-gtk 2>/dev/null; xsettingsd-restart 2>/dev/null || true"'
+post_hook = 'bash -c "gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3-dark && gsettings set org.gnome.desktop.interface icon-theme Papirus && sleep 0.1 && gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3-dark && gsettings set org.gnome.desktop.interface color-scheme prefer-dark && killall xdg-desktop-portal-gtk 2>/dev/null; xsettingsd-restart 2>/dev/null || true"'
 
 [templates.kdeglobals]
 input_path = '~/.config/matugen/templates/kdeglobals'
@@ -114,3 +114,8 @@ post_hook = 'killall yazi'
 #input_path = '~/.config/matugen/templates/neovim-theme.lua'
 #output_path = '~/.config/nvim/matugen.lua'
 #post_hook = 'pkill -SIGUSR1 nvim'
+
+[templates.folder]
+input_path = '~/.config/matugen/templates/colors-papirus.txt'
+output_path = '~/.config/matugen/papirus-folders/colors-papirus.txt'
+post_hook = '~/.config/matugen/papirus-folders/change-icons.sh'

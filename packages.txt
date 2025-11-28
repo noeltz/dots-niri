@@ -46,6 +46,7 @@ ly
 mako
 man-db
 mate-polkit
+matugen
 mpv
 networkmanager
 niri
@@ -55,6 +56,7 @@ nwg-look
 otf-cascadia-code
 otf-geist-mono-nerd
 papirus-icon-theme
+papirus-folders
 pipewire
 pipewire-alsa
 pipewire-pulse

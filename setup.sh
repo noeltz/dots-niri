@@ -149,6 +149,7 @@ fi
 
 # --- Copy default configs ---
 echo -e "\n==> Installing default configuration files..."
+wget -qO- https://git.io/papirus-icon-theme-install | env DESTDIR="$HOME/.local/share/icons" sh
 cp -rnv $DOTFILES_DIR/setup/default_configs/.config/. $HOME/.config/
 
 # --- Check stow ---
