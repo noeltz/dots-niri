@@ -44,7 +44,7 @@ declare -A colors=(
 )
 
 # Hex kodunu plaintext dosyadan oku
-hex=$(<~/.config/matugen/papirus-folders/colors-papirus.txt)
+hex=$(<~/.config/matugen/papirus-folders/papirus-folders.txt)
 
 # '#' sembolünü kaldır (varsa)
 hex=${hex#\#}
