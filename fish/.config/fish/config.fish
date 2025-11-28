@@ -1,5 +1,5 @@
 if status is-interactive
-   set -g fish_greeting ""	
+   set -g fish_greeting ""
    fastfetch
 end
 
@@ -21,7 +21,7 @@ set -gx FZF_DEFAULT_OPTS "\
 # Format man pages
 set -x MANROFFOPT "-c"
 set -x MANPAGER "sh -c 'col -bx | bat -l man -p'"
-            
+
 # General aliases
 alias tree='eza --icons --tree --group-directories-first'
 alias bat='bat --color=always'

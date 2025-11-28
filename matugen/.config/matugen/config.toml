@@ -11,14 +11,14 @@ arguments = [
     "--transition-step", "60"
 ]
 
-[templates.hyprland]
-input_path = '~/.config/matugen/templates/hyprland-colors.conf'
-output_path = '~/.config/hypr/components/colors.conf'
-post_hook = 'hyprctl reload'
+#[templates.hyprland]
+#input_path = '~/.config/matugen/templates/hyprland-colors.conf'
+#output_path = '~/.config/hypr/components/colors.conf'
+#post_hook = 'hyprctl reload'
 
 [templates.rofi]
 input_path = '~/.config/matugen/templates/rofi-colors.rasi'
-output_path = '~/.config/rofi/colors.rasi'
+output_path = '~/.config/rofi/themes/wallust.rasi'
 
 [templates.kitty]
 input_path = '~/.config/matugen/templates/kitty-colors.conf'
@@ -29,18 +29,18 @@ post_hook = 'kill -SIGUSR1 $(pgrep kitty)'
 input_path = '~/.config/matugen/templates/colors.css'
 output_path = '~/.config/waybar/colors.css'
 
-[templates.wlogout]
-input_path = '~/.config/matugen/templates/colors.css'
-output_path = '~/.config/wlogout/colors.css'
+#[templates.wlogout]
+#input_path = '~/.config/matugen/templates/colors.css'
+#output_path = '~/.config/wlogout/colors.css'
 
-[templates.clipse]
-input_path = '~/.config/matugen/templates/clipse-theme.json'
-output_path = '~/.config/clipse/custom_theme.json'
+#[templates.clipse]
+#input_path = '~/.config/matugen/templates/clipse-theme.json'
+#output_path = '~/.config/clipse/custom_theme.json'
 
-[templates.fcitx5]
-input_path = '~/.config/matugen/templates/fcitx5-theme.conf'
-output_path = '~/.local/share/fcitx5/themes/material-you/theme.conf'
-post_hook = 'killall fcitx5; fcitx5 -d &'
+#[templates.fcitx5]
+#input_path = '~/.config/matugen/templates/fcitx5-theme.conf'
+#output_path = '~/.local/share/fcitx5/themes/material-you/theme.conf'
+#post_hook = 'killall fcitx5; fcitx5 -d &'
 
 [templates.gtk3-colors]
 input_path = '~/.config/matugen/templates/gtk-colors.css'
@@ -72,45 +72,45 @@ input_path = '~/.config/matugen/templates/btop.theme'
 output_path = '~/.config/btop/themes/material-you.theme'
 post_hook = 'killall btop'
 
-[templates.vscode]
-input_path = '~/.config/matugen/templates/vscode-settings.json'
-output_path = '~/.config/VSCodium/User/vscode-colors.json'
-post_hook = '~/.config/waybar/scripts/vscode-apply-colors.sh'
+#[templates.vscode]
+#input_path = '~/.config/matugen/templates/vscode-settings.json'
+#output_path = '~/.config/VSCodium/User/vscode-colors.json'
+#post_hook = '~/.config/waybar/scripts/vscode-apply-colors.sh'
 
-[templates.gimp]
-input_path = '~/.config/matugen/templates/colors.css'
-output_path = '~/.config/GIMP/3.0/themes/MaterialYou/colors.css'
-post_hook = 'killall -HUP xsettingsd'
+#[templates.gimp]
+#input_path = '~/.config/matugen/templates/colors.css'
+#output_path = '~/.config/GIMP/3.0/themes/MaterialYou/colors.css'
+#post_hook = 'killall -HUP xsettingsd'
 
-[templates.nwg-lock]
-input_path = '~/.config/matugen/templates/colors.css'
-output_path = '~/.config/nwg-dock-hyprland/colors.css'
-post_hook = 'killall nwg-dock-hyprland; hyprctl dispatch exec "nwg-dock-hyprland -p bottom -a center -mb 5 -d"'
+#[templates.nwg-lock]
+#input_path = '~/.config/matugen/templates/colors.css'
+#output_path = '~/.config/nwg-dock-hyprland/colors.css'
+#post_hook = 'killall nwg-dock-hyprland; hyprctl dispatch exec "nwg-dock-hyprland -p bottom -a center -mb 5 -d"'
 
-[templates.nwg-drawer]
-input_path = '~/.config/matugen/templates/colors.css'
-output_path = '~/.config/nwg-drawer/colors.css'
+#[templates.nwg-drawer]
+#input_path = '~/.config/matugen/templates/colors.css'
+#output_path = '~/.config/nwg-drawer/colors.css'
 
-[templates.pywalfox]
-input_path = '~/.config/matugen/templates/pywalfox-colors.json'
-output_path = '~/.cache/wal/colors.json'
-post_hook = 'pywalfox update'
+#[templates.pywalfox]
+#input_path = '~/.config/matugen/templates/pywalfox-colors.json'
+#output_path = '~/.cache/wal/colors.json'
+#post_hook = 'pywalfox update'
 
-[templates.swaync]
-input_path = '~/.config/matugen/templates/colors.css'
-output_path = '~/.config/swaync/colors.css'
-post_hook = 'swaync-client -rs'
+#[templates.swaync]
+#input_path = '~/.config/matugen/templates/colors.css'
+#output_path = '~/.config/swaync/colors.css'
+#post_hook = 'swaync-client -rs'
 
 [templates.yazi]
 input_path = '~/.config/matugen/templates/yazi-theme.toml'
 output_path = '~/.config/yazi/theme.toml'
 post_hook = 'killall yazi'
 
-[templates.vesktop]
-input_path = '~/.config/matugen/templates/vesktop-system24.theme.css'
-output_path = '~/.config/vesktop/themes/system24.theme.css'
+#[templates.vesktop]
+#input_path = '~/.config/matugen/templates/vesktop-system24.theme.css'
+#output_path = '~/.config/vesktop/themes/system24.theme.css'
 
-[templates.neovim]
-input_path = '~/.config/matugen/templates/neovim-theme.lua'
-output_path = '~/.config/nvim/matugen.lua'
-post_hook = 'pkill -SIGUSR1 nvim'
+#[templates.neovim]
+#input_path = '~/.config/matugen/templates/neovim-theme.lua'
+#output_path = '~/.config/nvim/matugen.lua'
+#post_hook = 'pkill -SIGUSR1 nvim'
