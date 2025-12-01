@@ -1,6 +1,5 @@
 #!/bin/bash
 #
-# Luminance Theme Selector Script (Noeltz Edition) - Fixed Logic
 # Usage: ./get_theme_for_wallpaper.sh /path/to/wallpaper.jpg
 # Output: DARK or LIGHT (only)
 
@@ -39,10 +38,10 @@ normalized_mean_luminance=$(( raw_mean_luminance / 256 ))
 # 4. **INVERTED DECISION LOGIC**: Output the image's classification.
 if [ "$normalized_mean_luminance" -gt "$LUMINANCE_THRESHOLD" ]; then
     # Image is bright (> 128)
-    echo "LIGHT"
+    echo "light"
 else
     # Image is dark (<= 128)
-    echo "DARK"
+    echo "dark"
 fi
 
 exit 0

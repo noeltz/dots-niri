@@ -4,6 +4,7 @@ xdg-desktop-portal-gtk
 adw-gtk-theme
 base
 bat
+bc
 bluetui
 bluez
 bluez-utils
@@ -64,6 +65,7 @@ qt5ct
 resvg
 ripgrep
 rofi
+sassc
 satty
 snapper
 starship

@@ -1,0 +1,160 @@
+#!/bin/bash
+
+# --- Color Definitions (HEX to be converted to RGB for comparison) ---
+# NOTE: Hex colors are defined as space-separated strings.
+# We are using a representative subset of colors for each theme.
+
+declare -A THEMES
+THEMES[catppuccin]="4C4F69 D8DEE9 8839EF F5A97F 40A02B 1E66F5"  # Latte Text, Snow, Mauve, Peach, Green, Blue
+THEMES[gruvbox]="282828 B8BB26 CC241D D79921 458588 A89984"    # Dark BG, Green, Red, Yellow, Blue, FG
+THEMES[nord]="2E3440 ECEFF4 8FBCBB 88C0D0 BF616A EBCB8B"        # Polar Night, Snow Storm, Frost, Red, Yellow
+THEMES[material]="2196F3 4CAF50 FFEB3B FF9800 E91E63 9E9E9E"    # Blue 500, Green 500, Yellow 500, Orange 500, Pink 500, Grey 500
+THEMES[everforest]="374247 C5E1A5 A7C080 E6C1D3 D699B6 859966"  # Dark Hard, Light Green, Green, Light Magenta, Magenta, Bright Green
+
+# --- Utility Functions ---
+
+# Function to convert a HEX color (RRGGBB) to decimal RGB components.
+# Usage: hex_to_rgb RRGGBB
+hex_to_rgb() {
+    local hex_color="$1"
+    # Extract R, G, B components and convert from hex to decimal.
+    # We use 'printf %d' for hex to decimal conversion.
+    R=$(printf "%d" "0x${hex_color:0:2}")
+    G=$(printf "%d" "0x${hex_color:2:2}")
+    B=$(printf "%d" "0x${hex_color:4:2}")
+    echo "$R $G $B"
+}
+
+# Function to calculate the squared Euclidean distance between two colors in RGB space.
+# We use squared distance to avoid calculating a square root, which is computationally expensive
+# in pure Bash/BC, and the relative order of distances is preserved.
+# Usage: calculate_sq_distance R1 G1 B1 R2 G2 B2
+calculate_sq_distance() {
+    local R1="$1" G1="$2" B1="$3"
+    local R2="$4" G2="$5" B2="$6"
+    # Calculate (R1-R2)^2 + (G1-G2)^2 + (B1-B2)^2 using 'bc' for arithmetic
+    bc <<< "scale=0; ( $R1 - $R2 )^2 + ( $G1 - $G2 )^2 + ( $B1 - $B2 )^2"
+}
+
+# --- Main Comparison Logic ---
+
+compare_colors() {
+    # The first argument is the array of input HEX colors
+    local -a input_colors=("$@")
+
+    # Initialize a result map to store the total squared distance for each theme
+    declare -A total_sq_distance
+    local theme_name theme_colors theme_rgb_list min_avg_sq_distance=999999999999
+    local best_match_theme=""
+
+    echo "🎨 Comparing ${#input_colors[@]} input colors to defined theme palettes..."
+    echo "---"
+
+    # Loop through each defined theme
+    for theme_name in "${!THEMES[@]}"; do
+        theme_colors="${THEMES[$theme_name]}"
+        theme_color_array=($theme_colors)
+        theme_rgb_list=()
+
+        # 1. Convert all theme colors to RGB first
+        for hex_c in "${theme_color_array[@]}"; do
+            theme_rgb_list+=("$(hex_to_rgb "$hex_c")")
+        done
+
+        local current_theme_total_sq_distance=0
+        local input_color_count=0
+        local theme_color_count="${#theme_rgb_list[@]}"
+
+        # 2. For each input color, find the closest color in the theme
+        for input_hex in "${input_colors[@]}"; do
+            input_color_count=$((input_color_count + 1))
+
+            # Remove leading '#' if present
+            input_hex=${input_hex/\#/}
+
+            # Validate input format (6 hex characters)
+            if [[ ! "$input_hex" =~ ^[0-9A-Fa-f]{6}$ ]]; then
+                echo "⚠️ Skipping invalid color: #$input_hex" >&2
+                continue
+            fi
+
+            local input_rgb=($(hex_to_rgb "$input_hex"))
+            local R1="${input_rgb[0]}" G1="${input_rgb[1]}" B1="${input_rgb[2]}"
+
+            local min_sq_distance_for_color=999999999999
+
+            # Compare the input color against *all* colors in the current theme
+            for theme_rgb in "${theme_rgb_list[@]}"; do
+                local theme_rgb_arr=($theme_rgb)
+                local R2="${theme_rgb_arr[0]}" G2="${theme_rgb_arr[1]}" B2="${theme_rgb_arr[2]}"
+
+                # Calculate the squared distance
+                sq_dist=$(calculate_sq_distance "$R1" "$G1" "$B1" "$R2" "$G2" "$B2")
+
+                # Update minimum distance for this input color
+                if (( sq_dist < min_sq_distance_for_color )); then
+                    min_sq_distance_for_color="$sq_dist"
+                fi
+            done
+
+            # Add the distance of the *closest* theme color to the total theme distance
+            current_theme_total_sq_distance=$((current_theme_total_sq_distance + min_sq_distance_for_color))
+
+        done
+
+        # Calculate the average squared distance for the theme
+        if (( input_color_count > 0 )); then
+             # Use bc for division to get the average, which gives a score.
+            local average_sq_distance=$(bc <<< "scale=2; $current_theme_total_sq_distance / $input_color_count")
+
+            total_sq_distance["$theme_name"]="$average_sq_distance"
+
+            echo "Theme: **$theme_name** | Average Squared Distance: **$average_sq_distance**"
+
+            # Check for best match (find the minimum average distance)
+            # Compare using pure integer math by scaling the float back up or checking the integer part.
+            # We'll use 'awk' here for clean floating point comparison, otherwise it gets messy in pure Bash.
+            # We'll use an integer trick, comparing scaled-up numbers.
+            # E.g., 100 * 123.45 = 12345
+            scaled_current=$(bc <<< "scale=0; $average_sq_distance * 100")
+
+            # Initialize min_avg_sq_distance with the first theme's score
+            if [ -z "$best_match_theme" ]; then
+                best_match_theme="$theme_name"
+                min_avg_sq_distance="$scaled_current"
+            elif (( scaled_current < min_avg_sq_distance )); then
+                min_avg_sq_distance="$scaled_current"
+                best_match_theme="$theme_name"
+            fi
+        else
+            echo "Error: No valid input colors provided." >&2
+            return 1
+        fi
+    done
+
+    echo "---"
+    echo "✨ **RECOMMENDATION**: The colors match **$best_match_theme** the most."
+    echo "---"
+    echo "Detailed scores (Lower is better):"
+    for theme in "${!total_sq_distance[@]}"; do
+        printf "  %-12s: %s\n" "$theme" "${total_sq_distance[$theme]}"
+    done
+}
+
+# --- Execution Entry Point ---
+
+# Check if 'bc' is available
+if ! command -v bc &> /dev/null; then
+    echo "Error: 'bc' (basic calculator) is required but not installed." >&2
+    exit 1
+fi
+
+# Check if input arguments were provided
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 <HEX_COLOR_1> [<HEX_COLOR_2> ...]"
+    echo "Example: $0 \#f2d5cf \#303446 \#8caaee"
+    exit 1
+fi
+
+# Pass all command line arguments (the hex colors) to the comparison function
+compare_colors "$@"
