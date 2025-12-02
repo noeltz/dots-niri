@@ -21,6 +21,7 @@ git
 github-cli
 gnome-disk-utility
 gnome-keyring
+go
 gvfs
 hypridle
 hyprlock
