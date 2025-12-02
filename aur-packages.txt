@@ -1,4 +1,5 @@
 crush-bin
+git-credential-oauth
 google-chrome
 gtk-engine-murrine
 qwen-code
