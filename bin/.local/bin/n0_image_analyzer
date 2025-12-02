@@ -15,7 +15,7 @@ _usage() {
     printf "%s\\n" "Find dominant colors in images."
     printf "\\n"
     printf "%s\\n" "  -d, --deviation   deviation, higher value, faster computation, default 1"
-    printf "%s\\n" "  -n, --numcolors   number of output colors (using quantization), default 3"
+    printf "%s\\n" "  -n, --numcolors   number of output colors (using quantization), default 16"
     printf "%s\\n" "  -r, --resize      resize before procedure, lower value, faster computation, default 250x250"
     printf "%s\\n" "  -f, --format      output format [rgb|hex], default hex"
     printf "%s\\n" "  -s, --sort        sort method [percentage|vibrance], default percentage"
@@ -429,7 +429,7 @@ _check_deps() {
 
 _sanitize_parameters(){
     if [ -z "${num_colors}" ]; then
-        num_colors="3"
+        num_colors="16"
     else
         _is_int "${num_colors}" || _die "Option -n|--numcolors requires a number parameter '${num_colors}'"
     fi
