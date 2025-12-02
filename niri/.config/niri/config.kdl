@@ -251,6 +251,7 @@ binds {
 
         struts {}
     }
+	include "colors.kdl"
 
 // ────────────── Animation Settings ──────────────
 // https://github.com/YaLTeR/niri/wiki/Configuration:-Animations
