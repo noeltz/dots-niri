@@ -12,19 +12,6 @@ brightnessctl
 btop
 btrfs-progs
 cliphist
-colloid-catppuccin-gtk-theme-git
-colloid-catppuccin-theme-git
-colloid-cursors-git
-colloid-gtk-theme-git
-colloid-icon-theme
-colloid-dracula-gtk-theme-git
-colloid-dracula-theme-git
-colloid-everforest-gtk-theme-git
-colloid-everforest-theme-git
-colloid-gruvbox-gtk-theme-git
-colloid-gruvbox-theme-git
-colloid-nord-gtk-theme-git
-colloid-nord-icon-theme-git
 eza
 fastfetch
 fish
@@ -39,6 +26,7 @@ hypridle
 hyprlock
 hyprpicker
 hyprshot
+imagemagick
 imv
 kitty
 kvantum
@@ -47,7 +35,6 @@ ly
 mako
 man-db
 mate-polkit
-matugen
 mpv
 networkmanager
 niri
@@ -74,7 +61,7 @@ swww
 termscp
 thunar
 thunar-archive-plugin
-tokyonight-gtk-theme-git
+thunar-volman
 ttf-jetbrains-mono-nerd
 ttf-roboto-mono-nerd
 udiskie
