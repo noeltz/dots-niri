@@ -304,16 +304,67 @@ _get_brightness() {
     _get_brightness_by_dominant_colors "$image" "2"
 }
 
-_categorize_brightness() {
-    # Function to determine if image is dark or light based on dominant color analysis
-    # With dominant colors, we might want a different threshold than for average brightness
-    local brightness="$1"
-    local image="$2"  # Optional: Pass image path to potentially get more dominant colors
+_categorize_brightness_advanced() {
+    # Function to determine if image is black, dark or light
+    # Considers both overall brightness and dominant colors
+    local image="$1"
 
-    # Use a more appropriate threshold for dominant color based brightness
-    # Since dominant colors represent the most significant visual elements,
-    # a threshold around 128-135 might be more appropriate
-    if [ "$brightness" -lt 135 ]; then
+    # Get dominant colors with their percentages
+    # Use ImageMagick to quantize to a small number of colors to find dominant ones
+    colors_output=$(convert "${image}" -resize 250x250 -depth 8 +dither -colors 5 -format "%c" histogram:info: 2>/dev/null | \
+        awk 'NF {sub(/\).*/,"");sub(/\(/,"");gsub(/ /,"");print $0}' | \
+        sort -t: -k1,1nr -r)
+
+    if [ -n "$colors_output" ]; then
+        # Get the most dominant color (first line after sorting - highest count)
+        first_line=$(echo "$colors_output" | head -n 1)
+        if [ -n "$first_line" ]; then
+            # Extract count and color
+            total_pixels=$(echo "$first_line" | cut -d: -f1)
+            color_part=$(echo "$first_line" | cut -d: -f2-)
+
+            if [ -n "$total_pixels" ] && [ -n "$color_part" ]; then
+                # Calculate percentage of this dominant color
+                all_pixels=$(echo "$colors_output" | awk 'BEGIN{sum=0}{split($0, a, ":"); sum += a[1]} END{print sum}')
+                if [ -n "$all_pixels" ] && [ "$all_pixels" -gt 0 ]; then
+                    percentage=$(echo "$total_pixels $all_pixels" | awk '{printf "%.2f", ($1*100.0)/$2}')
+
+                    # Check if this dominant color is very dark (almost black)
+                    # Extract RGB components
+                    IFS=',' read -r r g b <<< "$color_part"
+                    r_int=$(echo "$r" | awk '{printf "%.0f", $1}')
+                    g_int=$(echo "$g" | awk '{printf "%.0f", $1}')
+                    b_int=$(echo "$b" | awk '{printf "%.0f", $1}')
+
+                    # Find max RGB component to determine if color is very dark
+                    if [ "$r_int" -ge "$g_int" ] && [ "$r_int" -ge "$b_int" ]; then
+                        max_component="$r_int"
+                    elif [ "$g_int" -ge "$r_int" ] && [ "$g_int" -ge "$b_int" ]; then
+                        max_component="$g_int"
+                    else
+                        max_component="$b_int"
+                    fi
+
+                    # If dominant color > 80% and the color is very dark (max component < 20), classify as black
+                    # Use awk to do precise decimal comparison
+                    is_over_80=$(echo "$percentage" | awk '
+                    {
+                        if ($1 > 80.0) print "yes"
+                        else print "no"
+                    }')
+
+                    if [ "$is_over_80" = "yes" ] && [ "$max_component" -lt 20 ]; then
+                        printf "black"
+                        return
+                    fi
+                fi
+            fi
+        fi
+    fi
+
+    # If not classified as black, use traditional brightness categorization
+    brightness_value=$(_get_brightness "${image}")
+    if [ "$brightness_value" -lt 135 ]; then
         printf "dark"
     else
         printf "light"
@@ -509,9 +560,81 @@ for image; do
 
         if [ -n "${preview}" ]; then
             # Process for preview output
-            # Calculate brightness and show it as in non-preview mode
-            brightness_value=$(_get_brightness "${image}")
-            brightness_category=$(_categorize_brightness "${brightness_value}" "${image}")
+            # Calculate brightness considering black condition
+            # First get the quantized colors to check for black condition
+            colors_output_for_brightness=$(convert "${image}" -resize "${resize}" -depth 8 +dither -colors "${num_colors}" \
+                -format "%c" histogram:info: 2>/dev/null | \
+                awk 'NF {sub(/\).*/,"");sub(/\(/,"");gsub(/ /,"");print $0}' | \
+                sort -t: -k1,1nr -r)  # Sort by count descending to get dominant color first
+
+            # Initialize brightness category as non-black
+            brightness_category=""
+
+            # Check if the most dominant color is black-like and >80% of the image
+            if [ -n "$colors_output_for_brightness" ]; then
+                first_line=$(echo "$colors_output_for_brightness" | head -n 1)
+                if [ -n "$first_line" ]; then
+                    total_pixels=$(echo "$first_line" | cut -d: -f1)
+                    color_part=$(echo "$first_line" | cut -d: -f2-)
+
+                    if [ -n "$total_pixels" ] && [ -n "$color_part" ]; then
+                        # Calculate percentage of this dominant color
+                        all_pixels=$(echo "$colors_output_for_brightness" | awk 'BEGIN{sum=0}{split($0, a, ":"); sum += a[1]} END{print sum}')
+                        if [ -n "$all_pixels" ] && [ "$all_pixels" -gt 0 ]; then
+                            percentage=$(echo "$total_pixels $all_pixels" | awk '{printf "%.6f", ($1*100.0)/$2}')
+
+                            # Check if this dominant color is very dark (almost black)
+                            IFS=',' read -r r g b <<< "$color_part"
+                            r_int=$(echo "$r" | awk '{printf "%.0f", $1}')
+                            g_int=$(echo "$g" | awk '{printf "%.0f", $1}')
+                            b_int=$(echo "$b" | awk '{printf "%.0f", $1}')
+
+                            # Find max RGB component to determine if color is very dark
+                            if [ "$r_int" -ge "$g_int" ] && [ "$r_int" -ge "$b_int" ]; then
+                                max_component="$r_int"
+                            elif [ "$g_int" -ge "$r_int" ] && [ "$g_int" -ge "$b_int" ]; then
+                                max_component="$g_int"
+                            else
+                                max_component="$b_int"
+                            fi
+
+                            # Use different thresholds based on how dark the color is
+                            if [ "$max_component" -lt 15 ]; then
+                                # For very dark colors, allow >70% dominance to qualify as black
+                                is_over_70=$(echo "$percentage" | awk '
+                                {
+                                    if ($1 > 70.0) print "yes"
+                                    else print "no"
+                                }')
+                                if [ "$is_over_70" = "yes" ]; then
+                                    brightness_category="black"
+                                fi
+                            elif [ "$max_component" -lt 40 ]; then
+                                # For moderately dark colors, require >80% dominance to qualify as black
+                                is_over_80=$(echo "$percentage" | awk '
+                                {
+                                    if ($1 > 80.0) print "yes"
+                                    else print "no"
+                                }')
+                                if [ "$is_over_80" = "yes" ]; then
+                                    brightness_category="black"
+                                fi
+                            fi
+                        fi
+                    fi
+                fi
+            fi
+
+            # If not classified as black, use traditional brightness categorization
+            if [ -z "$brightness_category" ]; then
+                brightness_value=$(_get_brightness "${image}")
+                if [ "$brightness_value" -lt 135 ]; then
+                    brightness_category="dark"
+                else
+                    brightness_category="light"
+                fi
+            fi
+
             printf "BRIGHTNESS:%s\\n" "${brightness_category}"
 
             # Use ImageMagick's quantization to reduce colors to the specified number
@@ -613,8 +736,79 @@ for image; do
             rm -f "$temp_vibrance_file"
         else
             # For non-preview mode, always show brightness and colors with percentages
-            brightness_value=$(_get_brightness "${image}")
-            brightness_category=$(_categorize_brightness "${brightness_value}" "${image}")
+            # First get the quantized colors to check for black condition
+            colors_output_for_brightness=$(convert "${image}" -resize "${resize}" -depth 8 +dither -colors "${num_colors}" \
+                -format "%c" histogram:info: 2>/dev/null | \
+                awk 'NF {sub(/\).*/,"");sub(/\(/,"");gsub(/ /,"");print $0}' | \
+                sort -t: -k1,1nr -r)  # Sort by count descending to get dominant color first
+
+            # Initialize brightness category as non-black
+            brightness_category=""
+
+            # Check if the most dominant color is black-like and >80% of the image
+            if [ -n "$colors_output_for_brightness" ]; then
+                first_line=$(echo "$colors_output_for_brightness" | head -n 1)
+                if [ -n "$first_line" ]; then
+                    total_pixels=$(echo "$first_line" | cut -d: -f1)
+                    color_part=$(echo "$first_line" | cut -d: -f2-)
+
+                    if [ -n "$total_pixels" ] && [ -n "$color_part" ]; then
+                        # Calculate percentage of this dominant color
+                        all_pixels=$(echo "$colors_output_for_brightness" | awk 'BEGIN{sum=0}{split($0, a, ":"); sum += a[1]} END{print sum}')
+                        if [ -n "$all_pixels" ] && [ "$all_pixels" -gt 0 ]; then
+                            percentage=$(echo "$total_pixels $all_pixels" | awk '{printf "%.6f", ($1*100.0)/$2}')
+
+                            # Check if this dominant color is very dark (almost black)
+                            IFS=',' read -r r g b <<< "$color_part"
+                            r_int=$(echo "$r" | awk '{printf "%.0f", $1}')
+                            g_int=$(echo "$g" | awk '{printf "%.0f", $1}')
+                            b_int=$(echo "$b" | awk '{printf "%.0f", $1}')
+
+                            # Find max RGB component to determine if color is very dark
+                            if [ "$r_int" -ge "$g_int" ] && [ "$r_int" -ge "$b_int" ]; then
+                                max_component="$r_int"
+                            elif [ "$g_int" -ge "$r_int" ] && [ "$g_int" -ge "$b_int" ]; then
+                                max_component="$g_int"
+                            else
+                                max_component="$b_int"
+                            fi
+
+                            # Use different thresholds based on how dark the color is
+                            if [ "$max_component" -lt 15 ]; then
+                                # For very dark colors, allow >70% dominance to qualify as black
+                                is_over_70=$(echo "$percentage" | awk '
+                                {
+                                    if ($1 > 70.0) print "yes"
+                                    else print "no"
+                                }')
+                                if [ "$is_over_70" = "yes" ]; then
+                                    brightness_category="black"
+                                fi
+                            elif [ "$max_component" -lt 40 ]; then
+                                # For moderately dark colors, require >80% dominance to qualify as black
+                                is_over_80=$(echo "$percentage" | awk '
+                                {
+                                    if ($1 > 80.0) print "yes"
+                                    else print "no"
+                                }')
+                                if [ "$is_over_80" = "yes" ]; then
+                                    brightness_category="black"
+                                fi
+                            fi
+                        fi
+                    fi
+                fi
+            fi
+
+            # If not classified as black, use traditional brightness categorization
+            if [ -z "$brightness_category" ]; then
+                brightness_value=$(_get_brightness "${image}")
+                if [ "$brightness_value" -lt 135 ]; then
+                    brightness_category="dark"
+                else
+                    brightness_category="light"
+                fi
+            fi
 
             # Output brightness mode and colors sorted by percentage for piping to other scripts
             printf "BRIGHTNESS:%s\\n" "${brightness_category}"
