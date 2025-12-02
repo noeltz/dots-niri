@@ -1,7 +1,5 @@
 crush-bin
 google-chrome
 gtk-engine-murrine
-papirus-folders-catppuccin-git
-rose-pine-gtk-theme
-solarized-dark-themes
+qwen-code
 waypaper-git
