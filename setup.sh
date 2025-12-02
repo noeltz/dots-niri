@@ -72,12 +72,8 @@ TARGET_DIR="$HOME"
 # The directory where backups will be stored
 BACKUP_DIR="$HOME/.dotfiles_backup_$(date +%Y%m%d-%H%M%S)"
 
-
-
-
-# PLACEHOLDER echo "==> Clone dotfiles repository..."
-
-
+echo "==> Install software from git..."
+#wget -qO- https://git.io/papirus-icon-theme-install | env DESTDIR="$HOME/.local/share/icons" sh
 
 # --- Package installation ---
 echo "==> Installing required packages..."
@@ -103,8 +99,8 @@ fi
 # --- Install paru if not installed ---
 if ! command -v paru > /dev/null; then
     # Download the binary version to avoid compilation
-    git clone https://aur.archlinux.org/paru-bin.git ~/repos/paru-bin
-    cd ~/repos/paru-bin
+    git clone https://aur.archlinux.org/paru-bin.git $HOME/.repoinstalls/paru-bin
+    cd $HOME/.repoinstalls/paru-bin
     makepkg --syncdeps --install
     cd -
 fi
@@ -123,6 +119,24 @@ if [[ -f "$AUR_FILE" ]]; then
     done < "$AUR_FILE"
 else
     echo "⚠️  No 'aur-packages.txt' found, skipped."
+fi
+
+# --- Theme and Icon packages ---
+if ! [ -d $HOME/.themes/no_d0ts ]; then
+    echo "==> Install Colloid GTK Themes..."
+    git clone https://github.com/vinceliuice/Colloid-gtk-theme $HOME/.repoinstalls/Colloid-gtk-theme
+    cd $HOME/.repoinstalls/Colloid-gtk-theme
+    ./install.sh -d $HOME/.themes/no_d0ts/light -t all -c light -s compact --tweaks all
+    ./install.sh -d $HOME/.themes/no_d0ts/dark -t all -c dark -s compact --tweaks all
+    ./install.sh -d $HOME/.themes/no_d0ts/black -t all -c dark -s compact --tweaks all black
+    cd -
+fi
+if ! [ -d $HOME/.local/share/icons/no_d0ts ]; then
+    echo "==> Install Colloid Icons..."
+    git clone https://github.com/vinceliuice/Colloid-icon-theme $HOME/.repoinstalls/Colloid-icon-theme
+    cd $HOME/.repoinstalls/Colloid-icon-theme
+    ./install.sh -d $HOME/.local/share/icons/no_d0ts -t all -s all
+    cd -
 fi
 
 # --- Enable Fish shell ---
@@ -149,7 +163,6 @@ fi
 
 # --- Copy default configs ---
 echo -e "\n==> Installing default configuration files..."
-wget -qO- https://git.io/papirus-icon-theme-install | env DESTDIR="$HOME/.local/share/icons" sh
 cp -rnv $DOTFILES_DIR/setup/default_configs/.config/. $HOME/.config/
 
 # --- Check stow ---
