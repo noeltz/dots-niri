@@ -20,6 +20,7 @@ _usage() {
     printf "%s\\n" "  -f, --format      output format [rgb|hex], default hex"
     printf "%s\\n" "  -s, --sort        sort method [percentage|vibrance], default percentage"
     printf "%s\\n" "  -p, --preview     preview colors in command line"
+    printf "%s\\n" "  -c, --colortheme  match colors against Colloid GTK theme palettes"
     printf "%s\\n" "  -q, --quiet       suppress warnings"
     printf "%s\\n" "  --version         show version information and exit"
     printf "%s\\n" "  -h, --help        show this help message and exit"
@@ -371,6 +372,406 @@ _categorize_brightness_advanced() {
     fi
 }
 
+_calculate_color_distance() {
+    # Function to calculate RGB color distance between two hex colors
+    local hex1="$1"
+    local hex2="$2"
+
+    # Remove # if present
+    hex1="${hex1#'#'}"
+    hex2="${hex2#'#'}"
+
+    # Extract RGB components
+    local r1=$(printf "%d" 0x${hex1:0:2})
+    local g1=$(printf "%d" 0x${hex1:2:2})
+    local b1=$(printf "%d" 0x${hex1:4:2})
+
+    local r2=$(printf "%d" 0x${hex2:0:2})
+    local g2=$(printf "%d" 0x${hex2:2:2})
+    local b2=$(printf "%d" 0x${hex2:4:2})
+
+    # Calculate Euclidean distance
+    local dr=$((r1 - r2))
+    local dg=$((g1 - g2))
+    local db=$((b1 - b2))
+    local distance=$(echo "$dr $dg $db" | awk '{result = sqrt($1*$1 + $2*$2 + $3*$3); printf "%.0f", result}')
+
+    echo "$distance"
+}
+
+_load_color_palettes() {
+    # Function to load all color palettes from SCSS files
+    local scss_dir="$HOME/.repoinstalls/Colloid-gtk-theme/src/sass/"
+    local temp_palette_file=$(mktemp)
+
+    # Loop through all color palette files
+    for scss_file in "${scss_dir}"_color-palette-*.scss; do
+        if [ -f "$scss_file" ]; then
+            # Extract variables from SCSS file with more flexible pattern matching
+            # Allow for various spacing and formats including possible spaces, comments, etc.
+            grep -E '\$[a-zA-Z0-9_-]+\s*:' "$scss_file" | while IFS= read -r line; do
+                # Extract variable name and color with more flexible regex
+                var_name=$(echo "$line" | sed -n 's/.*\(\$[a-zA-Z0-9_-]*\).*/\1/p' | xargs)
+
+                # Extract hex color - match # followed by 3 or 6 hex digits, handling possible whitespace
+                hex_color=$(echo "$line" | sed -n 's/.*#\([A-Fa-f0-9]\{3,6\}\).*/\1/p' | tr -d ' \t;')
+
+                # If hex color is only 3 digits, expand it to 6 digits
+                if [ ${#hex_color} -eq 3 ]; then
+                    hex_color="${hex_color:0:1}${hex_color:0:1}${hex_color:1:1}${hex_color:1:1}${hex_color:2:1}${hex_color:2:1}"
+                fi
+
+                if [ -n "$var_name" ] && [ -n "$hex_color" ]; then
+                    # Ensure it's a hex color format (now should be 6 digits)
+                    if echo "$hex_color" | grep -qE '^[A-Fa-f0-9]{6}$'; then
+                        # Add to temp file with file path
+                        echo "$scss_file|$var_name|#${hex_color}|$line" >> "$temp_palette_file"
+                    fi
+                fi
+            done
+        fi
+    done
+
+    echo "$temp_palette_file"
+}
+
+_score_theme_match() {
+    # Function to score how well a color palette matches a specific theme
+    # This compares dominant colors (excluding most vibrant) against base colors only
+    # ($grey*, $black, $white) in a theme
+    local colors_data="$1"  # Format: hex|vibrance|percentage|original_line|original_count
+    local palette_db="$2"
+    local theme_file="$3"   # Specific theme file to score
+    local exclude_most_vibrant="$4"  # "1" to exclude most vibrant, "0" to include all
+
+    # Store colors_data to a temp file to avoid subshell issues
+    colors_temp_file=$(mktemp)
+    echo "$colors_data" > "$colors_temp_file"
+
+    # Get most vibrant color if we need to exclude it
+    local most_vibrant_hex=""
+    if [ "$exclude_most_vibrant" = "1" ]; then
+        # Extract the most vibrant color from colors_data by finding highest vibrance
+        local max_vibrance=-1
+        while IFS='|' read -r color_hex vibrance percentage original_line original_count; do
+            if [ -n "$color_hex" ] && [ -n "$vibrance" ]; then
+                # Compare vibrance values numerically
+                if [ "$vibrance" -gt "$max_vibrance" ]; then
+                    max_vibrance="$vibrance"
+                    most_vibrant_hex="$color_hex"
+                fi
+            fi
+        done < "$colors_temp_file"
+    fi
+
+    # Initialize total score
+    local total_score=0
+
+    # Process each color to compare against this theme's base colors only
+    while IFS='|' read -r color_hex vibrance percentage original_line original_count; do
+        if [ -n "$color_hex" ] && [ -n "$percentage" ]; then
+            # Check if this is the most vibrant color to exclude
+            should_skip=0
+            if [ "$exclude_most_vibrant" = "1" ] && [ -n "$most_vibrant_hex" ] && [ "$color_hex" = "$most_vibrant_hex" ]; then
+                should_skip=1
+            fi
+
+            if [ "$should_skip" -eq 0 ]; then
+                # Parse percentage as a number for weight
+                perc_val=$(echo "$percentage" | awk '{printf "%.6f", $1}')
+                if [ "$(echo "$perc_val > 0" | bc -l 2>/dev/null || echo "$perc_val > 0")" = "1" ] || [ "$perc_val" != "0" ]; then
+                    # Look for all base colors in this specific theme and calculate aggregate score
+                    # Compare against grey, black, white colors
+                    local found_base_colors=0
+                    local total_similarity=0
+
+                    # For this theme file, find all base colors and compare
+                    # Let's use a different approach - extract the specific theme data first
+                    local theme_data_file=$(mktemp)
+                    grep "^${theme_file}|" "$palette_db" > "$theme_data_file"
+
+                    local processed_entries=0
+                    local base_colors_found=0
+                    while IFS='|' read -r file_path var_name var_hex line_content; do
+                        processed_entries=$((processed_entries + 1))
+
+                        # We know this belongs to the theme since we pre-filtered
+                        if [ -n "$var_name" ] && [ -n "$var_hex" ]; then
+                            # Check if this is a base/background color from Colloid themes
+                            # Remove the leading $ from variable name
+                            var_name_stripped=$(echo "$var_name" | sed 's/^\$//')
+                            is_base_color=0
+
+                            # Use more reliable pattern matching for base colors
+                            case "$var_name_stripped" in
+                                grey-*|gray-*|black|white)
+                                    is_base_color=1 ;;
+                                bg-*|background-*)
+                                    is_base_color=1 ;;
+                            esac
+
+                            if [ "$is_base_color" -eq 1 ]; then
+                                base_colors_found=$((base_colors_found + 1))
+                                # Calculate distance to this base color in the theme
+                                dist=$(_calculate_color_distance "$color_hex" "$var_hex")
+
+                                # Calculate similarity (higher for closer matches, 0-100 scale)
+                                local similarity=$(awk -v d="$dist" 'BEGIN {
+                                    # Convert distance to similarity
+                                    normalized = d / 441.67;
+                                    similarity = (1 - normalized) * 100;
+                                    if (similarity < 0) similarity = 0;
+                                    printf "%.2f", similarity;
+                                }')
+
+                                total_similarity=$(echo "$total_similarity $similarity" | awk '{printf "%.2f", $1 + $2}')
+                                found_base_colors=$((found_base_colors + 1))
+                            fi
+                        fi
+                    done < "$theme_data_file"
+                    rm -f "$theme_data_file"
+
+                    # Calculate score contribution based on average similarity to base colors
+                    if [ "$found_base_colors" -gt 0 ]; then
+                        local avg_similarity=$(echo "$total_similarity $found_base_colors" | awk '{printf "%.2f", $1 / $2}')
+                        # Calculate score based on average similarity and color percentage
+                        local color_score=$(echo "$avg_similarity $perc_val" | awk '{
+                            avg_sim = $1;
+                            pct = $2;
+                            score = (avg_sim / 100.0) * pct;
+                            # Ensure score is always calculated properly
+                            printf "%.2f", score;
+                        }')
+                        # Add to the total score for this theme
+                        total_score=$(echo "$total_score $color_score" | awk '{printf "%.0f", $1 + $2}')
+                    fi
+                fi
+            fi
+        fi
+    done < "$colors_temp_file"
+
+    rm -f "$colors_temp_file"
+
+    # Return total score for this theme
+    echo "$total_score"
+}
+
+_select_best_theme() {
+    # Function to select the best matching theme for an image based on overall color palette
+    # Excludes the most vibrant color from the base color matching
+    # Returns all theme scores for output
+    local colors_data="$1"  # Format: hex_color|vibrance|percentage|original_line|original_count
+    local palette_db="$2"
+    local output_all="${3:-0}"  # 1 to output all scores, 0 to return only best
+
+    temp_scores=$(mktemp)
+    # Get unique theme files from palette DB
+    themes_list=$(cut -d'|' -f1 "$palette_db" | sort -u)
+
+    for theme_file in $themes_list; do
+        if [ -n "$theme_file" ]; then
+            theme_score=$(_score_theme_match "$colors_data" "$palette_db" "$theme_file" "1")  # Exclude most vibrant
+            echo "$theme_score|$theme_file" >> "$temp_scores"
+        fi
+    done
+
+    if [ "$output_all" = "1" ]; then
+        # Sort by score descending and output all with percentages
+        sorted_scores=$(sort -t'|' -k1,1nr "$temp_scores")
+        max_score=$(echo "$sorted_scores" | head -n1 | cut -d'|' -f1)
+
+        # If max score is greater than 0, calculate percentages relative to it
+        if [ "$max_score" -gt 0 ] && [ "$max_score" != "0" ]; then
+            echo "$sorted_scores" | while IFS='|' read -r score theme_file; do
+                if [ -n "$score" ] && [ -n "$theme_file" ]; then
+                    # Calculate percentage relative to the best score, scaled to 100
+                    percentage=$(echo "$score $max_score" | awk '{if($2 > 0) printf "%.2f", ($1/$2)*100; else print "0.00"}')
+                    echo "$percentage|$(basename "$theme_file")|$score"
+                fi
+            done
+        else
+            # If all scores are 0, just output 0% for all themes
+            echo "$sorted_scores" | while IFS='|' read -r score theme_file; do
+                if [ -n "$score" ] && [ -n "$theme_file" ]; then
+                    echo "0.00|$(basename "$theme_file")|$score"
+                fi
+            done
+        fi
+    else
+        # Find theme with highest score (sort numerically in reverse order to get highest first)
+        best_theme=$(sort -t'|' -k1,1nr "$temp_scores" | head -n 1 | cut -d'|' -f2)
+        rm -f "$temp_scores"
+        echo "$best_theme"
+    fi
+
+    rm -f "$temp_scores"
+}
+
+_match_color_to_specific_theme() {
+    # Function to match a color against a specific theme's accent colors only
+    local target_hex="$1"
+    local palette_db="$2"
+    local specific_theme="$3"
+    local tolerance="${4:-20}"  # Default tolerance of 20
+    local best_match=""
+    local best_distance=""
+
+    # Remove # prefix if present
+    target_hex="${target_hex#'#'}"
+    target_hex="#$target_hex"
+
+    # Iterate through palette entries, but only for the specific theme
+    while IFS='|' read -r file_path var_name var_hex line_content; do
+        if [ "$file_path" = "$specific_theme" ] && [ -n "$var_name" ] && [ -n "$var_hex" ]; then
+            # Check if this is an accent color (red, pink, purple, blue, teal, green, yellow, orange)
+            var_name_stripped=$(echo "$var_name" | sed 's/^\$//')
+            is_accent=0
+            case "$var_name_stripped" in
+                red-*|pink-*|purple-*|blue-*|teal-*|green-*|yellow-*|orange-*)
+                    is_accent=1 ;;
+            esac
+
+            # Also include button and link colors as accents
+            case "$var_name_stripped" in
+                button-*|links|link-*)
+                    is_accent=1 ;;
+            esac
+
+            if [ "$is_accent" -eq 1 ]; then
+                # This is an accent color in the specific theme, calculate distance
+                distance=$(_calculate_color_distance "$target_hex" "$var_hex")
+                if [ -z "$best_distance" ] || [ "$distance" -lt "$best_distance" ]; then
+                    if [ "$distance" -le "$tolerance" ]; then
+                        best_distance="$distance"
+                        best_match="$file_path|$var_name|$var_hex|$line_content"
+                    fi
+                fi
+            fi
+        fi
+    done < "$palette_db"
+
+    # If no match within tolerance, find the closest match anyway
+    if [ -z "$best_match" ]; then
+        while IFS='|' read -r file_path var_name var_hex line_content; do
+            if [ "$file_path" = "$specific_theme" ] && [ -n "$var_name" ] && [ -n "$var_hex" ]; then
+                # Check if this is an accent color
+                var_name_stripped="${var_name#'\$'}"
+                is_accent=0
+                case "$var_name_stripped" in
+                    red-*|pink-*|purple-*|blue-*|teal-*|green-*|yellow-*|orange-*)
+                        is_accent=1 ;;
+                esac
+
+                case "$var_name_stripped" in
+                    button-*|links|link-*)
+                        is_accent=1 ;;
+                esac
+
+                if [ "$is_accent" -eq 1 ]; then
+                    # Calculate distance
+                    distance=$(_calculate_color_distance "$target_hex" "$var_hex")
+                    if [ -z "$best_distance" ] || [ "$distance" -lt "$best_distance" ]; then
+                        best_distance="$distance"
+                        best_match="$file_path|$var_name|$var_hex|$line_content"
+                    fi
+                fi
+            fi
+        done < "$palette_db"
+    fi
+
+    echo "$best_match"
+}
+
+_match_color_to_palette() {
+    # Function to match a color against palette colors (preserving original functionality)
+    local target_hex="$1"
+    local palette_db="$2"
+    local variant="$3"  # "light", "dark", or "any"
+    local tolerance="${4:-20}"  # Default tolerance of 20
+    local best_match=""
+    local best_distance=""
+    local closest_match=""  # Closest match regardless of tolerance
+    local closest_distance=""
+
+    # Remove # prefix if present
+    target_hex="${target_hex#'#'}"
+    target_hex="#$target_hex"
+
+    # Iterate through palette entries
+    while IFS='|' read -r file_path var_name var_hex line_content; do
+        if [ -n "$file_path" ] && [ -n "$var_name" ] && [ -n "$var_hex" ]; then
+            # Determine if this color fits the required variant
+            case "$variant" in
+                "light")
+                    if [ "${var_name#*-}" = "light" ] || [ "$var_name" = "\$white" ]; then
+                        # Calculate distance
+                        distance=$(_calculate_color_distance "$target_hex" "$var_hex")
+
+                        # Track closest match regardless of tolerance
+                        if [ -z "$closest_distance" ] || [ "$distance" -lt "$closest_distance" ]; then
+                            closest_distance="$distance"
+                            closest_match="$file_path|$var_name|$var_hex|$line_content"
+                        fi
+
+                        # Track best match within tolerance if it exists
+                        if [ -z "$best_distance" ] || [ "$distance" -lt "$best_distance" ]; then
+                            if [ "$distance" -le "$tolerance" ]; then
+                                best_distance="$distance"
+                                best_match="$file_path|$var_name|$var_hex|$line_content"
+                            fi
+                        fi
+                    fi
+                    ;;
+                "dark")
+                    if [ "${var_name#*-}" = "dark" ] || [ "$var_name" = "\$black" ]; then
+                        # Calculate distance
+                        distance=$(_calculate_color_distance "$target_hex" "$var_hex")
+
+                        # Track closest match regardless of tolerance
+                        if [ -z "$closest_distance" ] || [ "$distance" -lt "$closest_distance" ]; then
+                            closest_distance="$distance"
+                            closest_match="$file_path|$var_name|$var_hex|$line_content"
+                        fi
+
+                        # Track best match within tolerance if it exists
+                        if [ -z "$best_distance" ] || [ "$distance" -lt "$best_distance" ]; then
+                            if [ "$distance" -le "$tolerance" ]; then
+                                best_distance="$distance"
+                                best_match="$file_path|$var_name|$var_hex|$line_content"
+                            fi
+                        fi
+                    fi
+                    ;;
+                "any")
+                    # Calculate distance for any color
+                    distance=$(_calculate_color_distance "$target_hex" "$var_hex")
+
+                    # Track closest match regardless of tolerance
+                    if [ -z "$closest_distance" ] || [ "$distance" -lt "$closest_distance" ]; then
+                        closest_distance="$distance"
+                        closest_match="$file_path|$var_name|$var_hex|$line_content"
+                    fi
+
+                    # Track best match within tolerance if it exists
+                    if [ -z "$best_distance" ] || [ "$distance" -lt "$best_distance" ]; then
+                        if [ "$distance" -le "$tolerance" ]; then
+                            best_distance="$distance"
+                            best_match="$file_path|$var_name|$var_hex|$line_content"
+                        fi
+                    fi
+                    ;;
+            esac
+        fi
+    done < "$palette_db"
+
+    # Return best match within tolerance if found, otherwise return the closest match
+    if [ -n "$best_match" ]; then
+        echo "$best_match"
+    else
+        echo "$closest_match"
+    fi
+}
+
 _display_color_preview() {
     # Function to display color preview using ANSI escape codes
     local color="$1"
@@ -465,9 +866,10 @@ _sanitize_parameters(){
     fi
 }
 
-# Initialize preview, sort method, and method flags
+# Initialize preview, sort method, colortheme, and method flags
 preview=""
 sort="percentage"  # Default to sorting by percentage
+colortheme=""
 method="quantize"  # Default to quantize for better results
 resize="800x600"   # Default to larger resize for better color detection
 
@@ -535,6 +937,7 @@ for arg in "${@}"; do #parse options
             fi ;;
         -s*) sort="${1#-s}"; shift ;;
         --sort*) sort="${1#--sort}"; shift ;;
+        '-c'|'--colortheme') colortheme="1"; shift ;;
         '-f'|'--format')
             if [ "${#}" -gt "1" ]; then
                 case "${2}" in
@@ -558,7 +961,349 @@ for image; do
         # Determine if we need to show percentages (always show percentages for pipe output)
         show_percent="1"
 
-        if [ -n "${preview}" ]; then
+        if [ -n "${colortheme}" ]; then
+            # NEW IMPLEMENTATION: Color theme matching - matches base colors first, then accent based on brightness
+            # Load color palettes for theme matching
+            palette_db=$(_load_color_palettes)
+
+            # Get the quantized colors for analysis
+            colors_output=$(convert "${image}" -resize "${resize}" -depth 8 +dither -colors "${num_colors}" \
+                -format "%c" histogram:info: 2>/dev/null | \
+                awk 'NF {sub(/\).*/,"");sub(/\(/,"");gsub(/ /,"");print $0}' | \
+                sort -t: -k1,1nr -r)  # Sort by count descending to get dominant color first
+
+            # Calculate brightness category
+            # First get the quantized colors to check for black condition
+            colors_output_for_brightness=$(convert "${image}" -resize "${resize}" -depth 8 +dither -colors "${num_colors}" \
+                -format "%c" histogram:info: 2>/dev/null | \
+                awk 'NF {sub(/\).*/,"");sub(/\(/,"");gsub(/ /,"");print $0}' | \
+                sort -t: -k1,1nr -r)  # Sort by count descending to get dominant color first
+
+            # Initialize brightness category as non-black
+            brightness_category=""
+
+            # Check if the most dominant color is black-like and >80% of the image
+            if [ -n "$colors_output_for_brightness" ]; then
+                first_line=$(echo "$colors_output_for_brightness" | head -n 1)
+                if [ -n "$first_line" ]; then
+                    total_pixels=$(echo "$first_line" | cut -d: -f1)
+                    color_part=$(echo "$first_line" | cut -d: -f2-)
+
+                    if [ -n "$total_pixels" ] && [ -n "$color_part" ]; then
+                        # Calculate percentage of this dominant color
+                        all_pixels=$(echo "$colors_output_for_brightness" | awk 'BEGIN{sum=0}{split($0, a, ":"); sum += a[1]} END{print sum}')
+                        if [ -n "$all_pixels" ] && [ "$all_pixels" -gt 0 ]; then
+                            percentage=$(echo "$total_pixels $all_pixels" | awk '{printf "%.6f", ($1*100.0)/$2}')
+
+                            # Check if this dominant color is very dark (almost black)
+                            IFS=',' read -r r g b <<< "$color_part"
+                            r_int=$(echo "$r" | awk '{printf "%.0f", $1}')
+                            g_int=$(echo "$g" | awk '{printf "%.0f", $1}')
+                            b_int=$(echo "$b" | awk '{printf "%.0f", $1}')
+
+                            # Find max RGB component to determine if color is very dark
+                            if [ "$r_int" -ge "$g_int" ] && [ "$r_int" -ge "$b_int" ]; then
+                                max_component="$r_int"
+                            elif [ "$g_int" -ge "$r_int" ] && [ "$g_int" -ge "$b_int" ]; then
+                                max_component="$g_int"
+                            else
+                                max_component="$b_int"
+                            fi
+
+                            # Use different thresholds based on how dark the color is
+                            if [ "$max_component" -lt 15 ]; then
+                                # For very dark colors, allow >70% dominance to qualify as black
+                                is_over_70=$(echo "$percentage" | awk '
+                                {
+                                    if ($1 > 70.0) print "yes"
+                                    else print "no"
+                                }')
+                                if [ "$is_over_70" = "yes" ]; then
+                                    brightness_category="black"
+                                fi
+                            elif [ "$max_component" -lt 40 ]; then
+                                # For moderately dark colors, require >80% dominance to qualify as black
+                                is_over_80=$(echo "$percentage" | awk '
+                                {
+                                    if ($1 > 80.0) print "yes"
+                                    else print "no"
+                                }')
+                                if [ "$is_over_80" = "yes" ]; then
+                                    brightness_category="black"
+                                fi
+                            fi
+                        fi
+                    fi
+                fi
+            fi
+
+            # If not classified as black, use traditional brightness categorization
+            if [ -z "$brightness_category" ]; then
+                brightness_value=$(_get_brightness "${image}")
+                if [ "$brightness_value" -lt 135 ]; then
+                    brightness_category="dark"
+                else
+                    brightness_category="light"
+                fi
+            fi
+
+            # Now process colors to get data with vibrance for finding most vibrant
+            vibrance_temp_file=$(mktemp)
+            echo "$colors_output" | while IFS= read -r line; do
+                if [ -n "$line" ]; then
+                    # Extract total pixel count and color
+                    total_pixels=$(echo "$line" | cut -d: -f1)
+                    color_part=$(echo "$line" | cut -d: -f2-)
+
+                    if [ -n "$total_pixels" ] && [ -n "$color_part" ]; then
+                        # Calculate percentage for display
+                        resized_total=$(echo "$colors_output" | awk 'BEGIN{sum=0}{split($0, a, ":"); sum += a[1]} END{print sum}')
+                        if [ -n "$resized_total" ] && [ "$resized_total" -gt 0 ]; then
+                            percentage=$(echo "$total_pixels $resized_total" | awk '{printf "%.6f", ($1*100.0)/$2}')
+                        else
+                            percentage="0.000000"
+                        fi
+
+                        # Calculate vibrance based on saturation (max - min of RGB values)
+                        IFS=',' read -r r g b <<< "$color_part"
+                        # Ensure values are valid and convert to integers for vibrance calculation
+                        r_int=$(echo "$r" | awk '{printf "%.0f", $1}')
+                        g_int=$(echo "$g" | awk '{printf "%.0f", $1}')
+                        b_int=$(echo "$b" | awk '{printf "%.0f", $1}')
+
+                        # Calculate saturation as the difference between max and min RGB values
+                        # This will give us the vibrance value
+                        if [ "$r_int" -ge "$g_int" ] && [ "$r_int" -ge "$b_int" ]; then
+                            max_val="$r_int"
+                        elif [ "$g_int" -ge "$r_int" ] && [ "$g_int" -ge "$b_int" ]; then
+                            max_val="$g_int"
+                        else
+                            max_val="$b_int"
+                        fi
+
+                        if [ "$r_int" -le "$g_int" ] && [ "$r_int" -le "$b_int" ]; then
+                            min_val="$r_int"
+                        elif [ "$g_int" -le "$r_int" ] && [ "$g_int" -le "$b_int" ]; then
+                            min_val="$g_int"
+                        else
+                            min_val="$b_int"
+                        fi
+
+                        vibrance=$((max_val - min_val))
+
+                        # Convert to hex format for matching
+                        hex_color=$(printf "#%02X%02X%02X" "$r_int" "$g_int" "$b_int")
+
+                        # Store for processing (format: hex|vibrance|percentage|original_line|original_count)
+                        echo "$hex_color|$vibrance|$percentage|$line|$total_pixels" >> "$vibrance_temp_file"
+                    fi
+                fi
+            done
+
+            # Wait for background process to finish
+            wait
+
+            # Select the best matching theme based on base colors only (excluding most vibrant)
+            # First sort colors by vibrance to get the most vibrant one to exclude
+            sorted_vibrant=$(sort -t'|' -k2,2nr -r "$vibrance_temp_file")
+            most_vibrant_hex=$(echo "$sorted_vibrant" | head -n 1 | cut -d'|' -f1)
+
+            # Get all theme scores with percentages
+            all_theme_scores=$(_select_best_theme "$sorted_vibrant" "$palette_db" "1")
+
+            # Get the best theme (first line after sorting)
+            best_theme_line=$(echo "$all_theme_scores" | head -n 1)
+            best_theme_full_path=$(echo "$best_theme_line" | cut -d'|' -f2)
+            best_theme_percentage=$(echo "$best_theme_line" | cut -d'|' -f1)
+
+            # Output all theme match percentages
+            echo "$all_theme_scores" | while IFS='|' read -r percentage theme_name score; do
+                if [ -n "$percentage" ] && [ -n "$theme_name" ] && [ -n "$score" ]; then
+                    # Use LC_NUMERIC=C to ensure decimal point format
+                    percentage_for_printf=$(echo "$percentage" | tr ',' '.')
+                    LC_NUMERIC=C printf "THEME_MATCH: %s (%.2f%%) [score: %s]\\n" "$theme_name" "$percentage_for_printf" "$score"
+                fi
+            done
+
+            # DEBUG: Print selected theme and most vibrant color
+            # echo "DEBUG: Selected theme path: $best_theme_full_path" >&2
+            # echo "DEBUG: Most vibrant color: $most_vibrant_hex" >&2
+            # echo "DEBUG: Brightness category: $brightness_category" >&2
+
+            # Now match the most vibrant color based on brightness category
+            if [ "$brightness_category" = "light" ]; then
+                # Case 1: brightness is light - match against main light colors ($<color>-light)
+                # Find the closest matching accent color from the chosen theme
+                closest_accent_match=""
+                closest_distance=""
+
+                # First, show all accent color matches with their percentages
+                printf "\\nACCENT_MATCHES:\\n"
+
+                # DEBUG: Print info about accent matching
+                # echo "DEBUG: Starting accent matching for light theme" >&2
+                # echo "DEBUG: Looking in file: $best_theme_full_path" >&2
+
+                # Iterate through palette entries, but only for the specific selected theme
+                while IFS='|' read -r file_path var_name var_hex line_content; do
+                    # Check if the file path matches either the full path or basename of the selected theme
+                    file_basename=$(basename "$file_path")
+                    selected_basename=$(basename "$best_theme_full_path")
+                    if ([ "$file_path" = "$best_theme_full_path" ] || [ "$file_basename" = "$selected_basename" ]) && [ -n "$var_name" ] && [ -n "$var_hex" ]; then
+                        # Check if this is a light accent color
+                        var_name_stripped=$(echo "$var_name" | sed 's/^\$//')
+                        is_light_accent=0
+                        case "$var_name_stripped" in
+                            red-light|pink-light|purple-light|blue-light|teal-light|green-light|yellow-light|orange-light|red-*|pink-*|purple-*|blue-*|teal-*|green-*|yellow-*|orange-*|*red|*pink|*purple|*blue|*teal|*green|*yellow|*orange|button-*|links|link-*)
+                                is_light_accent=1 ;;
+                        esac
+
+                        if [ "$is_light_accent" -eq 1 ]; then
+                            # Calculate distance to this light accent color
+                            distance=$(_calculate_color_distance "$most_vibrant_hex" "$var_hex")
+                            # Calculate similarity percentage (lower distance = higher similarity)
+                            # Maximum possible distance is 441.67 (distance between #000000 and #FFFFFF)
+                            similarity_percentage=$(echo "$distance" | awk '{printf "%.2f", (1 - ($1/441.67)) * 100}')
+                            # Handle potential comma issue in similarity_percentage
+                            similarity_percentage_fixed=$(echo "$similarity_percentage" | sed 's/,/./g')
+
+                            similarity_percentage_for_printf=$(echo "$similarity_percentage_fixed" | tr ',' '.')
+                            LC_NUMERIC=C printf "  %s: %s (%.2f%%) [distance: %s]\\n" "$var_name" "$var_hex" "$similarity_percentage_for_printf" "$distance"
+
+                            if [ -z "$closest_distance" ] || [ "$distance" -lt "$closest_distance" ]; then
+                                closest_distance="$distance"
+                                closest_accent_match="$file_path|$var_name|$var_hex|$line_content"
+                            fi
+                        fi
+                    fi
+                done < "$palette_db"
+
+                # If no accent colors were found in the selected theme, fall back to any color in the theme
+                if [ -z "$closest_accent_match" ]; then
+                    # Reset variables to find any color in the theme
+                    closest_accent_match=""
+                    closest_distance=""
+
+                    # Iterate through palette entries again, looking for any color in the selected theme
+                    while IFS='|' read -r file_path var_name var_hex line_content; do
+                        # Check if the file path matches either the full path or basename of the selected theme
+                        file_basename=$(basename "$file_path")
+                        selected_basename=$(basename "$best_theme_full_path")
+                        if ([ "$file_path" = "$best_theme_full_path" ] || [ "$file_basename" = "$selected_basename" ]) && [ -n "$var_name" ] && [ -n "$var_hex" ]; then
+                            # Calculate distance to this color (any color in theme)
+                            distance=$(_calculate_color_distance "$most_vibrant_hex" "$var_hex")
+                            # Calculate similarity percentage (lower distance = higher similarity)
+                            # Maximum possible distance is 441.67 (distance between #000000 and #FFFFFF)
+                            similarity_percentage=$(echo "$distance" | awk '{printf "%.2f", (1 - ($1/441.67)) * 100}')
+                            # Handle potential comma issue in similarity_percentage
+                            similarity_percentage_fixed=$(echo "$similarity_percentage" | sed 's/,/./g')
+
+                            similarity_percentage_for_printf=$(echo "$similarity_percentage_fixed" | tr ',' '.')
+                            LC_NUMERIC=C printf "  %s: %s (%.2f%%) [distance: %s]\\n" "$var_name" "$var_hex" "$similarity_percentage_for_printf" "$distance"
+
+                            if [ -z "$closest_distance" ] || [ "$distance" -lt "$closest_distance" ]; then
+                                closest_distance="$distance"
+                                closest_accent_match="$file_path|$var_name|$var_hex|$line_content"
+                            fi
+                        fi
+                    done < "$palette_db"
+                fi
+            elif [ "$brightness_category" = "dark" ] || [ "$brightness_category" = "black" ]; then
+                # Case 2 & 3: brightness is dark or black - match against main dark colors ($<color>-dark)
+                # Find the closest matching accent color from the chosen theme
+                closest_accent_match=""
+                closest_distance=""
+
+                # First, show all accent color matches with their percentages
+                printf "\\nACCENT_MATCHES:\\n"
+
+                # Iterate through palette entries, but only for the specific selected theme
+                while IFS='|' read -r file_path var_name var_hex line_content; do
+                    # Check if the file path matches either the full path or basename of the selected theme
+                    file_basename=$(basename "$file_path")
+                    selected_basename=$(basename "$best_theme_full_path")
+                    if ([ "$file_path" = "$best_theme_full_path" ] || [ "$file_basename" = "$selected_basename" ]) && [ -n "$var_name" ] && [ -n "$var_hex" ]; then
+                        # Check if this is a dark accent color
+                        var_name_stripped=$(echo "$var_name" | sed 's/^\$//')
+                        is_dark_accent=0
+                        case "$var_name_stripped" in
+                            red-dark|pink-dark|purple-dark|blue-dark|teal-dark|green-dark|yellow-dark|orange-dark|red-*|pink-*|purple-*|blue-*|teal-*|green-*|yellow-*|orange-*|*red|*pink|*purple|*blue|*teal|*green|*yellow|*orange|button-*|links|link-*)
+                                is_dark_accent=1 ;;
+                        esac
+
+                        if [ "$is_dark_accent" -eq 1 ]; then
+                            # Calculate distance to this dark accent color
+                            distance=$(_calculate_color_distance "$most_vibrant_hex" "$var_hex")
+                            # Calculate similarity percentage (lower distance = higher similarity)
+                            # Maximum possible distance is 441.67 (distance between #000000 and #FFFFFF)
+                            similarity_percentage=$(echo "$distance" | awk '{printf "%.2f", (1 - ($1/441.67)) * 100}')
+                            # Handle potential comma issue in similarity_percentage
+                            similarity_percentage_fixed=$(echo "$similarity_percentage" | sed 's/,/./g')
+
+                            similarity_percentage_for_printf=$(echo "$similarity_percentage_fixed" | tr ',' '.')
+                            LC_NUMERIC=C printf "  %s: %s (%.2f%%) [distance: %s]\\n" "$var_name" "$var_hex" "$similarity_percentage_for_printf" "$distance"
+
+                            if [ -z "$closest_distance" ] || [ "$distance" -lt "$closest_distance" ]; then
+                                closest_distance="$distance"
+                                closest_accent_match="$file_path|$var_name|$var_hex|$line_content"
+                            fi
+                        fi
+                    fi
+                done < "$palette_db"
+
+                # If no accent colors were found in the selected theme, fall back to any color in the theme
+                if [ -z "$closest_accent_match" ]; then
+                    # Reset variables to find any color in the theme
+                    closest_accent_match=""
+                    closest_distance=""
+
+                    # Iterate through palette entries again, looking for any color in the selected theme
+                    while IFS='|' read -r file_path var_name var_hex line_content; do
+                        # Check if the file path matches either the full path or basename of the selected theme
+                        file_basename=$(basename "$file_path")
+                        selected_basename=$(basename "$best_theme_full_path")
+                        if ([ "$file_path" = "$best_theme_full_path" ] || [ "$file_basename" = "$selected_basename" ]) && [ -n "$var_name" ] && [ -n "$var_hex" ]; then
+                            # Calculate distance to this color (any color in theme)
+                            distance=$(_calculate_color_distance "$most_vibrant_hex" "$var_hex")
+                            # Calculate similarity percentage (lower distance = higher similarity)
+                            # Maximum possible distance is 441.67 (distance between #000000 and #FFFFFF)
+                            similarity_percentage=$(echo "$distance" | awk '{printf "%.2f", (1 - ($1/441.67)) * 100}')
+                            # Handle potential comma issue in similarity_percentage
+                            similarity_percentage_fixed=$(echo "$similarity_percentage" | sed 's/,/./g')
+
+                            similarity_percentage_for_printf=$(echo "$similarity_percentage_fixed" | tr ',' '.')
+                            LC_NUMERIC=C printf "  %s: %s (%.2f%%) [distance: %s]\\n" "$var_name" "$var_hex" "$similarity_percentage_for_printf" "$distance"
+
+                            if [ -z "$closest_distance" ] || [ "$distance" -lt "$closest_distance" ]; then
+                                closest_distance="$distance"
+                                closest_accent_match="$file_path|$var_name|$var_hex|$line_content"
+                            fi
+                        fi
+                    done < "$palette_db"
+                fi
+            fi
+
+            # Output only one recommendation: closest matching color palette and closest matching accent color
+            recommended_theme_name=$(basename "$best_theme_full_path")
+            printf "SELECTED_THEME: %s\\n" "$recommended_theme_name"
+            printf "BRIGHTNESS: %s\\n" "$brightness_category"
+
+            if [ -n "$closest_accent_match" ]; then
+                matching_file=$(echo "$closest_accent_match" | cut -d'|' -f1)
+                matching_variable=$(echo "$closest_accent_match" | cut -d'|' -f2)
+                matching_hex=$(echo "$closest_accent_match" | cut -d'|' -f3)
+                matching_line=$(echo "$closest_accent_match" | cut -d'|' -f4)
+
+                printf "ACCENT_VARIABLE: %s\\n" "$matching_variable"
+                printf "ACCENT_VALUE: %s\\n" "($matching_hex)"
+            else
+                printf "ACCENT_VARIABLE: (no close match found)\\n"
+                printf "ACCENT_VALUE: (%s)\\n" "$most_vibrant_hex"
+            fi
+
+            # Clean up temp files
+            rm -f "$vibrance_temp_file" "$palette_db"
+        elif [ -n "${preview}" ]; then
             # Process for preview output
             # Calculate brightness considering black condition
             # First get the quantized colors to check for black condition
@@ -734,6 +1479,348 @@ for image; do
 
             # Clean up temp file
             rm -f "$temp_vibrance_file"
+        elif [ -n "${colortheme}" ]; then
+            # Color theme matching mode - NEW IMPLEMENTATION
+            # Load color palettes for theme matching
+            palette_db=$(_load_color_palettes)
+
+            # Get the quantized colors for analysis
+            colors_output=$(convert "${image}" -resize "${resize}" -depth 8 +dither -colors "${num_colors}" \
+                -format "%c" histogram:info: 2>/dev/null | \
+                awk 'NF {sub(/\).*/,"");sub(/\(/,"");gsub(/ /,"");print $0}' | \
+                sort -t: -k1,1nr -r)  # Sort by count descending to get dominant color first
+
+            # Calculate brightness category
+            # First get the quantized colors to check for black condition
+            colors_output_for_brightness=$(convert "${image}" -resize "${resize}" -depth 8 +dither -colors "${num_colors}" \
+                -format "%c" histogram:info: 2>/dev/null | \
+                awk 'NF {sub(/\).*/,"");sub(/\(/,"");gsub(/ /,"");print $0}' | \
+                sort -t: -k1,1nr -r)  # Sort by count descending to get dominant color first
+
+            # Initialize brightness category as non-black
+            brightness_category=""
+
+            # Check if the most dominant color is black-like and >80% of the image
+            if [ -n "$colors_output_for_brightness" ]; then
+                first_line=$(echo "$colors_output_for_brightness" | head -n 1)
+                if [ -n "$first_line" ]; then
+                    total_pixels=$(echo "$first_line" | cut -d: -f1)
+                    color_part=$(echo "$first_line" | cut -d: -f2-)
+
+                    if [ -n "$total_pixels" ] && [ -n "$color_part" ]; then
+                        # Calculate percentage of this dominant color
+                        all_pixels=$(echo "$colors_output_for_brightness" | awk 'BEGIN{sum=0}{split($0, a, ":"); sum += a[1]} END{print sum}')
+                        if [ -n "$all_pixels" ] && [ "$all_pixels" -gt 0 ]; then
+                            percentage=$(echo "$total_pixels $all_pixels" | awk '{printf "%.6f", ($1*100.0)/$2}')
+
+                            # Check if this dominant color is very dark (almost black)
+                            IFS=',' read -r r g b <<< "$color_part"
+                            r_int=$(echo "$r" | awk '{printf "%.0f", $1}')
+                            g_int=$(echo "$g" | awk '{printf "%.0f", $1}')
+                            b_int=$(echo "$b" | awk '{printf "%.0f", $1}')
+
+                            # Find max RGB component to determine if color is very dark
+                            if [ "$r_int" -ge "$g_int" ] && [ "$r_int" -ge "$b_int" ]; then
+                                max_component="$r_int"
+                            elif [ "$g_int" -ge "$r_int" ] && [ "$g_int" -ge "$b_int" ]; then
+                                max_component="$g_int"
+                            else
+                                max_component="$b_int"
+                            fi
+
+                            # Use different thresholds based on how dark the color is
+                            if [ "$max_component" -lt 15 ]; then
+                                # For very dark colors, allow >70% dominance to qualify as black
+                                is_over_70=$(echo "$percentage" | awk '
+                                {
+                                    if ($1 > 70.0) print "yes"
+                                    else print "no"
+                                }')
+                                if [ "$is_over_70" = "yes" ]; then
+                                    brightness_category="black"
+                                fi
+                            elif [ "$max_component" -lt 40 ]; then
+                                # For moderately dark colors, require >80% dominance to qualify as black
+                                is_over_80=$(echo "$percentage" | awk '
+                                {
+                                    if ($1 > 80.0) print "yes"
+                                    else print "no"
+                                }')
+                                if [ "$is_over_80" = "yes" ]; then
+                                    brightness_category="black"
+                                fi
+                            fi
+                        fi
+                    fi
+                fi
+            fi
+
+            # If not classified as black, use traditional brightness categorization
+            if [ -z "$brightness_category" ]; then
+                brightness_value=$(_get_brightness "${image}")
+                if [ "$brightness_value" -lt 135 ]; then
+                    brightness_category="dark"
+                else
+                    brightness_category="light"
+                fi
+            fi
+
+            # Now process colors to get data with vibrance for finding most vibrant
+            vibrance_temp_file=$(mktemp)
+            echo "$colors_output" | while IFS= read -r line; do
+                if [ -n "$line" ]; then
+                    # Extract total pixel count and color
+                    total_pixels=$(echo "$line" | cut -d: -f1)
+                    color_part=$(echo "$line" | cut -d: -f2-)
+
+                    if [ -n "$total_pixels" ] && [ -n "$color_part" ]; then
+                        # Calculate percentage for display
+                        resized_total=$(echo "$colors_output" | awk 'BEGIN{sum=0}{split($0, a, ":"); sum += a[1]} END{print sum}')
+                        if [ -n "$resized_total" ] && [ "$resized_total" -gt 0 ]; then
+                            percentage=$(echo "$total_pixels $resized_total" | awk '{printf "%.6f", ($1*100.0)/$2}')
+                        else
+                            percentage="0.000000"
+                        fi
+
+                        # Calculate vibrance based on saturation (max - min of RGB values)
+                        IFS=',' read -r r g b <<< "$color_part"
+                        # Ensure values are valid and convert to integers for vibrance calculation
+                        r_int=$(echo "$r" | awk '{printf "%.0f", $1}')
+                        g_int=$(echo "$g" | awk '{printf "%.0f", $1}')
+                        b_int=$(echo "$b" | awk '{printf "%.0f", $1}')
+
+                        # Calculate saturation as the difference between max and min RGB values
+                        # This will give us the vibrance value
+                        if [ "$r_int" -ge "$g_int" ] && [ "$r_int" -ge "$b_int" ]; then
+                            max_val="$r_int"
+                        elif [ "$g_int" -ge "$r_int" ] && [ "$g_int" -ge "$b_int" ]; then
+                            max_val="$g_int"
+                        else
+                            max_val="$b_int"
+                        fi
+
+                        if [ "$r_int" -le "$g_int" ] && [ "$r_int" -le "$b_int" ]; then
+                            min_val="$r_int"
+                        elif [ "$g_int" -le "$r_int" ] && [ "$g_int" -le "$b_int" ]; then
+                            min_val="$g_int"
+                        else
+                            min_val="$b_int"
+                        fi
+
+                        vibrance=$((max_val - min_val))
+
+                        # Convert to hex format for matching
+                        hex_color=$(printf "#%02X%02X%02X" "$r_int" "$g_int" "$b_int")
+
+                        # Store for processing (format: hex|vibrance|percentage|original_line|original_count)
+                        echo "$hex_color|$vibrance|$percentage|$line|$total_pixels" >> "$vibrance_temp_file"
+                    fi
+                fi
+            done
+
+            # Wait for background process to finish
+            wait
+
+            # Select the best matching theme based on base colors only (excluding most vibrant)
+            # First sort colors by vibrance to get the most vibrant one to exclude
+            sorted_vibrant=$(sort -t'|' -k2,2nr -r "$vibrance_temp_file")
+            most_vibrant_hex=$(echo "$sorted_vibrant" | head -n 1 | cut -d'|' -f1)
+
+            # Get all theme scores with percentages
+            all_theme_scores=$(_select_best_theme "$sorted_vibrant" "$palette_db" "1")
+
+            # Get the best theme (first line after sorting)
+            best_theme_line=$(echo "$all_theme_scores" | head -n 1)
+            best_theme_full_path=$(echo "$best_theme_line" | cut -d'|' -f2)
+            best_theme_percentage=$(echo "$best_theme_line" | cut -d'|' -f1)
+
+            # Output all theme match percentages
+            echo "$all_theme_scores" | while IFS='|' read -r percentage theme_name score; do
+                if [ -n "$percentage" ] && [ -n "$theme_name" ] && [ -n "$score" ]; then
+                    # Use LC_NUMERIC=C to ensure decimal point format
+                    percentage_for_printf=$(echo "$percentage" | tr ',' '.')
+                    LC_NUMERIC=C printf "THEME_MATCH: %s (%.2f%%) [score: %s]\\n" "$theme_name" "$percentage_for_printf" "$score"
+                fi
+            done
+
+            # DEBUG: Print selected theme and most vibrant color
+            # echo "DEBUG: Selected theme path: $best_theme_full_path" >&2
+            # echo "DEBUG: Most vibrant color: $most_vibrant_hex" >&2
+            # echo "DEBUG: Brightness category: $brightness_category" >&2
+
+            # Now match the most vibrant color based on brightness category
+            if [ "$brightness_category" = "light" ]; then
+                # Case 1: brightness is light - match against main light colors ($<color>-light)
+                # Find the closest matching accent color from the chosen theme
+                closest_accent_match=""
+                closest_distance=""
+
+                # First, show all accent color matches with their percentages
+                printf "\\nACCENT_MATCHES:\\n"
+
+                # DEBUG: Print info about accent matching
+                # echo "DEBUG: Starting accent matching for light theme" >&2
+                # echo "DEBUG: Looking in file: $best_theme_full_path" >&2
+
+                # Iterate through palette entries, but only for the specific selected theme
+                while IFS='|' read -r file_path var_name var_hex line_content; do
+                    # Check if the file path matches either the full path or basename of the selected theme
+                    file_basename=$(basename "$file_path")
+                    selected_basename=$(basename "$best_theme_full_path")
+                    if ([ "$file_path" = "$best_theme_full_path" ] || [ "$file_basename" = "$selected_basename" ]) && [ -n "$var_name" ] && [ -n "$var_hex" ]; then
+                        # Check if this is a light accent color
+                        var_name_stripped=$(echo "$var_name" | sed 's/^\$//')
+                        is_light_accent=0
+                        case "$var_name_stripped" in
+                            red-light|pink-light|purple-light|blue-light|teal-light|green-light|yellow-light|orange-light|red-*|pink-*|purple-*|blue-*|teal-*|green-*|yellow-*|orange-*|*red|*pink|*purple|*blue|*teal|*green|*yellow|*orange|button-*|links|link-*)
+                                is_light_accent=1 ;;
+                        esac
+
+                        if [ "$is_light_accent" -eq 1 ]; then
+                            # Calculate distance to this light accent color
+                            distance=$(_calculate_color_distance "$most_vibrant_hex" "$var_hex")
+                            # Calculate similarity percentage (lower distance = higher similarity)
+                            # Maximum possible distance is 441.67 (distance between #000000 and #FFFFFF)
+                            similarity_percentage=$(echo "$distance" | awk '{printf "%.2f", (1 - ($1/441.67)) * 100}')
+                            # Handle potential comma issue in similarity_percentage
+                            similarity_percentage_fixed=$(echo "$similarity_percentage" | sed 's/,/./g')
+
+                            similarity_percentage_for_printf=$(echo "$similarity_percentage_fixed" | tr ',' '.')
+                            LC_NUMERIC=C printf "  %s: %s (%.2f%%) [distance: %s]\\n" "$var_name" "$var_hex" "$similarity_percentage_for_printf" "$distance"
+
+                            if [ -z "$closest_distance" ] || [ "$distance" -lt "$closest_distance" ]; then
+                                closest_distance="$distance"
+                                closest_accent_match="$file_path|$var_name|$var_hex|$line_content"
+                            fi
+                        fi
+                    fi
+                done < "$palette_db"
+
+                # If no accent colors were found in the selected theme, fall back to any color in the theme
+                if [ -z "$closest_accent_match" ]; then
+                    # Reset variables to find any color in the theme
+                    closest_accent_match=""
+                    closest_distance=""
+
+                    # Iterate through palette entries again, looking for any color in the selected theme
+                    while IFS='|' read -r file_path var_name var_hex line_content; do
+                        # Check if the file path matches either the full path or basename of the selected theme
+                        file_basename=$(basename "$file_path")
+                        selected_basename=$(basename "$best_theme_full_path")
+                        if ([ "$file_path" = "$best_theme_full_path" ] || [ "$file_basename" = "$selected_basename" ]) && [ -n "$var_name" ] && [ -n "$var_hex" ]; then
+                            # Calculate distance to this color (any color in theme)
+                            distance=$(_calculate_color_distance "$most_vibrant_hex" "$var_hex")
+                            # Calculate similarity percentage (lower distance = higher similarity)
+                            # Maximum possible distance is 441.67 (distance between #000000 and #FFFFFF)
+                            similarity_percentage=$(echo "$distance" | awk '{printf "%.2f", (1 - ($1/441.67)) * 100}')
+                            # Handle potential comma issue in similarity_percentage
+                            similarity_percentage_fixed=$(echo "$similarity_percentage" | sed 's/,/./g')
+
+                            similarity_percentage_for_printf=$(echo "$similarity_percentage_fixed" | tr ',' '.')
+                            LC_NUMERIC=C printf "  %s: %s (%.2f%%) [distance: %s]\\n" "$var_name" "$var_hex" "$similarity_percentage_for_printf" "$distance"
+
+                            if [ -z "$closest_distance" ] || [ "$distance" -lt "$closest_distance" ]; then
+                                closest_distance="$distance"
+                                closest_accent_match="$file_path|$var_name|$var_hex|$line_content"
+                            fi
+                        fi
+                    done < "$palette_db"
+                fi
+            elif [ "$brightness_category" = "dark" ] || [ "$brightness_category" = "black" ]; then
+                # Case 2 & 3: brightness is dark or black - match against main dark colors ($<color>-dark)
+                # Find the closest matching accent color from the chosen theme
+                closest_accent_match=""
+                closest_distance=""
+
+                # First, show all accent color matches with their percentages
+                printf "\\nACCENT_MATCHES:\\n"
+
+                # Iterate through palette entries, but only for the specific selected theme
+                while IFS='|' read -r file_path var_name var_hex line_content; do
+                    # Check if the file path matches either the full path or basename of the selected theme
+                    file_basename=$(basename "$file_path")
+                    selected_basename=$(basename "$best_theme_full_path")
+                    if ([ "$file_path" = "$best_theme_full_path" ] || [ "$file_basename" = "$selected_basename" ]) && [ -n "$var_name" ] && [ -n "$var_hex" ]; then
+                        # Check if this is a dark accent color
+                        var_name_stripped=$(echo "$var_name" | sed 's/^\$//')
+                        is_dark_accent=0
+                        case "$var_name_stripped" in
+                            red-dark|pink-dark|purple-dark|blue-dark|teal-dark|green-dark|yellow-dark|orange-dark|red-*|pink-*|purple-*|blue-*|teal-*|green-*|yellow-*|orange-*|*red|*pink|*purple|*blue|*teal|*green|*yellow|*orange|button-*|links|link-*)
+                                is_dark_accent=1 ;;
+                        esac
+
+                        if [ "$is_dark_accent" -eq 1 ]; then
+                            # Calculate distance to this dark accent color
+                            distance=$(_calculate_color_distance "$most_vibrant_hex" "$var_hex")
+                            # Calculate similarity percentage (lower distance = higher similarity)
+                            # Maximum possible distance is 441.67 (distance between #000000 and #FFFFFF)
+                            similarity_percentage=$(echo "$distance" | awk '{printf "%.2f", (1 - ($1/441.67)) * 100}')
+                            # Handle potential comma issue in similarity_percentage
+                            similarity_percentage_fixed=$(echo "$similarity_percentage" | sed 's/,/./g')
+
+                            similarity_percentage_for_printf=$(echo "$similarity_percentage_fixed" | tr ',' '.')
+                            LC_NUMERIC=C printf "  %s: %s (%.2f%%) [distance: %s]\\n" "$var_name" "$var_hex" "$similarity_percentage_for_printf" "$distance"
+
+                            if [ -z "$closest_distance" ] || [ "$distance" -lt "$closest_distance" ]; then
+                                closest_distance="$distance"
+                                closest_accent_match="$file_path|$var_name|$var_hex|$line_content"
+                            fi
+                        fi
+                    fi
+                done < "$palette_db"
+
+                # If no accent colors were found in the selected theme, fall back to any color in the theme
+                if [ -z "$closest_accent_match" ]; then
+                    # Reset variables to find any color in the theme
+                    closest_accent_match=""
+                    closest_distance=""
+
+                    # Iterate through palette entries again, looking for any color in the selected theme
+                    while IFS='|' read -r file_path var_name var_hex line_content; do
+                        # Check if the file path matches either the full path or basename of the selected theme
+                        file_basename=$(basename "$file_path")
+                        selected_basename=$(basename "$best_theme_full_path")
+                        if ([ "$file_path" = "$best_theme_full_path" ] || [ "$file_basename" = "$selected_basename" ]) && [ -n "$var_name" ] && [ -n "$var_hex" ]; then
+                            # Calculate distance to this color (any color in theme)
+                            distance=$(_calculate_color_distance "$most_vibrant_hex" "$var_hex")
+                            # Calculate similarity percentage (lower distance = higher similarity)
+                            # Maximum possible distance is 441.67 (distance between #000000 and #FFFFFF)
+                            similarity_percentage=$(echo "$distance" | awk '{printf "%.2f", (1 - ($1/441.67)) * 100}')
+                            # Handle potential comma issue in similarity_percentage
+                            similarity_percentage_fixed=$(echo "$similarity_percentage" | sed 's/,/./g')
+
+                            similarity_percentage_for_printf=$(echo "$similarity_percentage_fixed" | tr ',' '.')
+                            LC_NUMERIC=C printf "  %s: %s (%.2f%%) [distance: %s]\\n" "$var_name" "$var_hex" "$similarity_percentage_for_printf" "$distance"
+
+                            if [ -z "$closest_distance" ] || [ "$distance" -lt "$closest_distance" ]; then
+                                closest_distance="$distance"
+                                closest_accent_match="$file_path|$var_name|$var_hex|$line_content"
+                            fi
+                        fi
+                    done < "$palette_db"
+                fi
+            fi
+
+            # Output only one recommendation: closest matching color palette and closest matching accent color
+            recommended_theme_name=$(basename "$best_theme_full_path")
+            printf "SELECTED_THEME: %s\\n" "$recommended_theme_name"
+            printf "BRIGHTNESS: %s\\n" "$brightness_category"
+
+            if [ -n "$closest_accent_match" ]; then
+                matching_file=$(echo "$closest_accent_match" | cut -d'|' -f1)
+                matching_variable=$(echo "$closest_accent_match" | cut -d'|' -f2)
+                matching_hex=$(echo "$closest_accent_match" | cut -d'|' -f3)
+                matching_line=$(echo "$closest_accent_match" | cut -d'|' -f4)
+
+                printf "ACCENT_VARIABLE: %s\\n" "$matching_variable"
+                printf "ACCENT_VALUE: %s\\n" "($matching_hex)"
+            else
+                printf "ACCENT_VARIABLE: (no close match found)\\n"
+                printf "ACCENT_VALUE: (%s)\\n" "$most_vibrant_hex"
+            fi
+
+            # Clean up temp files
+            rm -f "$vibrance_temp_file" "$palette_db"
         else
             # For non-preview mode, always show brightness and colors with percentages
             # First get the quantized colors to check for black condition
